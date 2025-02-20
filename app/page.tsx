@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import AnimatedGlobe from "@/components/AnimatedGlobe";
+import AnimatedGlobe from "@/components/animated-globe";
 
 export default async function Home() {
   return (

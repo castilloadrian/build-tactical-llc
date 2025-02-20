@@ -1,7 +1,7 @@
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
-import { Navigation } from "@/components/Navigation";
+import { Navigation } from "@/components/navigation";
 import Link from "next/link";
 import "./globals.css";
 import { createClient } from "@/utils/supabase/server";
