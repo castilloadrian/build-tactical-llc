@@ -1,17 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
 import { Button } from '@/components/ui/button';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { resetPasswordAction } from '@/app/actions';
 import Link from 'next/link';
 
 export default async function ProfilePage() {
