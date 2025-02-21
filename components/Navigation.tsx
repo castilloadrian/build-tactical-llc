@@ -7,7 +7,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { User, Settings, LogOut } from "lucide-react";
+import { User, Settings, LogOut, LayoutDashboard } from "lucide-react";
 import { signOutAction } from "@/app/actions";
 import Link from "next/link";
 import { User as SupabaseUser } from '@supabase/supabase-js';
@@ -61,6 +61,12 @@ export function Navigation({ user }: NavigationProps) {
             </div>
             <div className="border-t" />
             <div className="space-y-1">
+              <Link href="/dashboard">
+                <Button variant="ghost" className="w-full justify-start" size="sm">
+                  <LayoutDashboard className="mr-2 h-4 w-4" />
+                  Dashboard
+                </Button> 
+              </Link>
               <Link href="/profile">
                 <Button variant="ghost" className="w-full justify-start" size="sm">
                   <User className="mr-2 h-4 w-4" />

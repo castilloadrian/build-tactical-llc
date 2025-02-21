@@ -1,11 +1,9 @@
 import { Button } from "@/components/ui/button";
-import AnimatedGlobe from "@/components/animated-globe";
 
 export default async function Home() {
   return (
     <>
       {/* Hero Section */}
-        <AnimatedGlobe />
         <div className="max-w-7xl mx-auto text-center relative z-10 py-24">
           <h1 className="text-5xl font-bold tracking-tight mb-6">
             Transform Your Contract Data into{" "}

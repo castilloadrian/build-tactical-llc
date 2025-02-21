@@ -14,16 +14,16 @@ export default async function ProfilePage() {
       
       <div className="space-y-4 mb-8">
         <div className="grid grid-cols-2 gap-2">
-          <div className="font-medium">Email</div>
+          <div className="font-medium text-blue-600">Email</div>
           <div>{user.email}</div>
           
-          <div className="font-medium">Full Name</div>
+          <div className="font-medium text-blue-600">Full Name</div>
           <div>{user.user_metadata.full_name}</div>
           
-          <div className="font-medium">Last Sign In</div>
+          <div className="font-medium text-blue-600">Last Sign In</div>
           <div>{new Date(user.last_sign_in_at || '').toLocaleString()}</div>
           
-          <div className="font-medium">Account Created</div>
+          <div className="font-medium text-blue-600">Account Created</div>
           <div>{new Date(user.created_at).toLocaleString()}</div>
         </div>
       </div>
@@ -32,7 +32,7 @@ export default async function ProfilePage() {
         <Link href="/reset-password">
           <Button
             variant="outline"
-            className="w-full"
+            className="w-full hover:text-blue-600 hover:border-blue-600"
           >
             Reset Password
           </Button>

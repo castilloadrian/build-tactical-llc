@@ -28,7 +28,7 @@ export default async function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">$45,231.89</div>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <ArrowUpRight className="h-4 w-4 text-green-500" />
+              <ArrowUpRight className="h-4 w-4 text-blue-500" />
               +20.1% from last month
             </p>
           </CardContent>
@@ -42,7 +42,7 @@ export default async function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">+2,350</div>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <ArrowUpRight className="h-4 w-4 text-green-500" />
+              <ArrowUpRight className="h-4 w-4 text-blue-500" />
               +180.1% from last month
             </p>
           </CardContent>
@@ -146,11 +146,11 @@ export default async function DashboardPage() {
                   <div className="space-y-1">
                     <p className="text-sm font-medium">{project}</p>
                     <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-green-500" />
+                      <div className="h-2 w-2 rounded-full bg-blue-500" />
                       <p className="text-xs text-muted-foreground">Active</p>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm">View</Button>
+                  <Button variant="outline" size="sm" className="hover:text-blue-600 hover:border-blue-600">View</Button>
                 </div>
               ))}
             </div>
