@@ -21,7 +21,7 @@ export default async function AdminPage() {
     .eq('id', user.id)
     .single();
   
-  if (publicUser?.role !== 'Owner') {
+  if (publicUser?.role !== 'Admin') {
     notFound();
   }
 
@@ -34,23 +34,23 @@ export default async function AdminPage() {
   return (
     <div className="container mx-auto py-10">
       <h1 className="text-2xl font-bold mb-4">Admin Dashboard</h1>
-      <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-800">
+      <div className="overflow-x-auto rounded-lg border border-primary/20">
+        <table className="min-w-full divide-y divide-primary/10">
+          <thead className="bg-primary/5">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Organization</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Role</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Email</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Organization</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Role</th>
             </tr>
           </thead>
-          <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+          <tbody className="bg-background divide-y divide-primary/10">
             {users?.map((user) => (
-              <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-gray-100">{user.full_name || 'N/A'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-gray-100">{user.email || 'N/A'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-gray-100">{publicUser?.organization?.name || 'N/A'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-gray-100">{user.role || 'N/A'}</td>
+              <tr key={user.id} className="hover:bg-primary/5">
+                <td className="px-6 py-4 whitespace-nowrap">{user.full_name || 'N/A'}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{user.email || 'N/A'}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{publicUser?.organization?.name || 'N/A'}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{user.role || 'N/A'}</td>
               </tr>
             ))}
           </tbody>
