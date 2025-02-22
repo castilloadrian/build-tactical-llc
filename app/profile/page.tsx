@@ -4,9 +4,18 @@ import Link from 'next/link';
 
 export default async function ProfilePage() {
   const supabase = await createClient();
+  
+  // Get auth user data
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) return null;
+
+  // Get public.users data with disabled RLS policy
+  const { data: publicUser } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', user.id)
+    .single();
 
   return (
     <div className="container max-w-xl py-8">
@@ -18,7 +27,13 @@ export default async function ProfilePage() {
           <div>{user.email}</div>
           
           <div className="font-medium text-blue-600">Full Name</div>
-          <div>{user.user_metadata.full_name}</div>
+          <div>{publicUser?.full_name || user.user_metadata.full_name}</div>
+          
+          <div className="font-medium text-blue-600">Organization</div>
+          <div>{publicUser?.organization || 'Not specified'}</div>
+          
+          <div className="font-medium text-blue-600">Role</div>
+          <div>{publicUser?.role || 'Not specified'}</div>
           
           <div className="font-medium text-blue-600">Last Sign In</div>
           <div>{new Date(user.last_sign_in_at || '').toLocaleString()}</div>

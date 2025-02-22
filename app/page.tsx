@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default async function Home() {
   return (
@@ -14,8 +15,12 @@ export default async function Home() {
           real-time synchronization of data, and enterprise-grade security.
         </p>
         <div className="flex gap-4 justify-center animate-fade-in-up [animation-delay:200ms] opacity-0 [animation-fill-mode:forwards]">
-          <Button size="lg">Learn More</Button>
-          <Button size="lg" variant="outline">Contact Us</Button>
+          <Link href="/learn-more">
+            <Button size="lg">Learn More</Button>
+          </Link>
+          <Link href="/contact">
+            <Button size="lg" variant="outline">Contact Us</Button>
+          </Link>
         </div>
       </div>
     </>

@@ -11,12 +11,31 @@ import { User, Settings, LogOut, LayoutDashboard } from "lucide-react";
 import { signOutAction } from "@/app/actions";
 import Link from "next/link";
 import { User as SupabaseUser } from '@supabase/supabase-js';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useState, useEffect } from 'react';
 
 interface NavigationProps {
   user: SupabaseUser | null;
 }
 
 export function Navigation({ user }: NavigationProps) {
+  const [isOwner, setIsOwner] = useState(false);
+  const supabase = createClientComponentClient();
+
+  useEffect(() => {
+    async function checkRole() {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user?.id)
+        .single();
+      
+      setIsOwner(userData?.role === 'Owner');
+    }
+    
+    if (user) checkRole();
+  }, [user]);
+
   if (!user) {
     return (
       <div className="flex items-center gap-4">
@@ -61,23 +80,25 @@ export function Navigation({ user }: NavigationProps) {
             </div>
             <div className="border-t" />
             <div className="space-y-1">
-              <Link href="/dashboard">
-                <Button variant="ghost" className="w-full justify-start" size="sm">
-                  <LayoutDashboard className="mr-2 h-4 w-4" />
-                  Dashboard
-                </Button> 
-              </Link>
+              {isOwner && (
+                <Link href="/admin">
+                  <Button variant="ghost" className="w-full justify-start" size="sm">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Admin
+                  </Button>
+                </Link>
+              )}
               <Link href="/profile">
                 <Button variant="ghost" className="w-full justify-start" size="sm">
                   <User className="mr-2 h-4 w-4" />
                   Profile
                 </Button>
               </Link>
-              <Link href="/settings">
+              <Link href="/dashboard">
                 <Button variant="ghost" className="w-full justify-start" size="sm">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
-                </Button>
+                  <LayoutDashboard className="mr-2 h-4 w-4" />
+                  Dashboard
+                </Button> 
               </Link>
             </div>
             <div className="border-t" />
