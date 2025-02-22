@@ -5,6 +5,7 @@ import { Navigation } from "@/components/navigation";
 import Link from "next/link";
 import "./globals.css";
 import { createClient } from "@/utils/supabase/server";
+import { Toaster } from 'sonner'
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -68,6 +69,7 @@ export default async function RootLayout({
             </div>
           </main>
         </ThemeProvider>
+        <Toaster richColors />
       </body>
     </html>
   );

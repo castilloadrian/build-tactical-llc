@@ -1,44 +1,101 @@
+'use client';
+
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useState } from "react";
+import emailjs from '@emailjs/browser';
+import { Toaster, toast } from 'sonner';
 
 export default function Contact() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    const form = e.currentTarget;
+    
+    try {
+      await emailjs.sendForm(
+        process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID!,
+        process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID!,
+        form,
+        process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY!
+      );
+
+      toast.success("Message sent successfully!");
+      form.reset();
+    } catch (error) {
+      toast.error("Failed to send message. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-24">
-      <h1 className="text-4xl font-bold mb-8 animate-fade-in-up text-center">
-        Contact <span className="text-accent">Build Tactical LLC</span>
+    <div className="max-w-7xl mx-auto px-4 py-12">
+      <Toaster richColors />
+      <h1 className="text-4xl font-bold mb-6 animate-fade-in-up text-center">
+        Contact <span className="text-primary">Build Tactical LLC</span>
       </h1>
       
-      <div className="grid gap-8 max-w-2xl mx-auto animate-fade-in-up [animation-delay:200ms] opacity-0 [animation-fill-mode:forwards] text-center">
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Get in Touch</h2>
-          <p className="text-lg text-slate-700">
-            We're here to help you transform your contract data management. 
-            Reach out to learn how we can support your business needs.
-          </p>
-        </section>
-
-        <section className="space-y-6">
+      <div className="max-w-xl mx-auto animate-fade-in-up [animation-delay:200ms] opacity-0 [animation-fill-mode:forwards]">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <h3 className="text-xl font-medium">Email</h3>
-            <p className="text-lg text-accent">contact@buildtactical.com</p>
+            <label htmlFor="name" className="text-sm font-medium">
+              Name
+            </label>
+            <Input
+              id="name"
+              name="from_name"
+              required
+              className="border-primary/20"
+              placeholder="Your name"
+            />
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-xl font-medium">Phone</h3>
-            <p className="text-lg text-accent">(555) 123-4567</p>
+            <label htmlFor="email" className="text-sm font-medium">
+              Email
+            </label>
+            <Input
+              id="email"
+              name="reply_to"
+              type="email"
+              required
+              className="border-primary/20"
+              placeholder="your@email.com"
+            />
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-xl font-medium">Business Hours</h3>
-            <p className="text-lg text-slate-700">Monday - Friday: 9:00 AM - 5:00 PM EST</p>
+            <label htmlFor="message" className="text-sm font-medium">
+              Message
+            </label>
+            <Textarea
+              id="message"
+              name="message"
+              required
+              className="min-h-[150px] border-primary/20"
+              placeholder="Your message..."
+            />
           </div>
-        </section>
 
-        <div className="mt-8">
-          <Link href="/">
-            <Button variant="outline">Back to Home</Button>
-          </Link>
-        </div>
+          <input 
+            type="hidden" 
+            name="to_name" 
+            value="Build Tactical LLC" 
+          />
+
+          <Button 
+            type="submit" 
+            className="w-full"
+            disabled={isLoading}
+          >
+            {isLoading ? "Sending..." : "Send Message"}
+          </Button>
+        </form>
       </div>
     </div>
   );
