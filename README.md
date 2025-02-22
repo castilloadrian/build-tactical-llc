@@ -21,8 +21,19 @@
 1. Set up your environment:
    - Copy `.env.example` to `.env.local`
    - Add your Supabase project URL and anon key from [your project's API settings](https://app.supabase.com/project/_/settings/api)
+   - Add your EmailJS credentials for the contact form:
+     ```
+     NEXT_PUBLIC_EMAILJS_SERVICE_ID=your_service_id
+     NEXT_PUBLIC_EMAILJS_TEMPLATE_ID=your_template_id
+     NEXT_PUBLIC_EMAILJS_PUBLIC_KEY=your_public_key
+     ```
 
-4. Run the development server:
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Run the development server:
    ```bash
    npm run dev
    ```
