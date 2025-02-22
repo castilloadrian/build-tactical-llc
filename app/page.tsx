@@ -4,6 +4,11 @@ import Link from "next/link";
 export default async function Home() {
   return (
     <>
+      {/* Background Pattern */}
+      <div className="fixed inset-0 -z-10 opacity-10 pointer-events-none">
+        <div className="absolute inset-0 bg-grid-tactical"></div>
+      </div>
+
       {/* Hero Section */}
       <div className="max-w-7xl mx-auto text-center relative z-10 py-24">
         <h1 className="text-5xl font-bold tracking-tight mb-6 animate-fade-in-up">
