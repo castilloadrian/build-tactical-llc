@@ -11,13 +11,17 @@ export default async function AdminPage() {
     redirect('/sign-in');
   }
 
-  const { data: userData } = await supabase
+  // Get public.users data with organization details
+  const { data: publicUser, error } = await supabase
     .from('users')
-    .select('role')
+    .select(`
+      *,
+      organization:organization_id (*)
+    `)
     .eq('id', user.id)
     .single();
   
-  if (userData?.role !== 'Owner') {
+  if (publicUser?.role !== 'Owner') {
     notFound();
   }
 
@@ -45,7 +49,7 @@ export default async function AdminPage() {
               <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                 <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-gray-100">{user.full_name || 'N/A'}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-gray-100">{user.email || 'N/A'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-gray-100">{user.organization || 'N/A'}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-gray-100">{publicUser?.organization?.name || 'N/A'}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-gray-100">{user.role || 'N/A'}</td>
               </tr>
             ))}

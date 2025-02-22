@@ -5,7 +5,7 @@ export default function LearnMore() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-24">
       <h1 className="text-4xl font-bold mb-8 animate-fade-in-up text-center">
-        Learn More About <span className="text-blue-600">Build Tactical LLC</span>
+        Learn More About <span className="text-accent">Build Tactical LLC</span>
       </h1>
       
       <div className="grid gap-8 animate-fade-in-up [animation-delay:200ms] opacity-0 [animation-fill-mode:forwards] max-w-2xl mx-auto text-center">

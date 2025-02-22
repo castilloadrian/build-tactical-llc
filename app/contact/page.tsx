@@ -5,7 +5,7 @@ export default function Contact() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-24">
       <h1 className="text-4xl font-bold mb-8 animate-fade-in-up text-center">
-        Contact <span className="text-blue-600">Build Tactical LLC</span>
+        Contact <span className="text-accent">Build Tactical LLC</span>
       </h1>
       
       <div className="grid gap-8 max-w-2xl mx-auto animate-fade-in-up [animation-delay:200ms] opacity-0 [animation-fill-mode:forwards] text-center">
@@ -20,12 +20,12 @@ export default function Contact() {
         <section className="space-y-6">
           <div className="space-y-2">
             <h3 className="text-xl font-medium">Email</h3>
-            <p className="text-lg text-blue-600">contact@buildtactical.com</p>
+            <p className="text-lg text-accent">contact@buildtactical.com</p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-xl font-medium">Phone</h3>
-            <p className="text-lg text-blue-600">(555) 123-4567</p>
+            <p className="text-lg text-accent">(555) 123-4567</p>
           </div>
 
           <div className="space-y-2">

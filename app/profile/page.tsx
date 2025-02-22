@@ -10,10 +10,13 @@ export default async function ProfilePage() {
 
   if (!user) return null;
 
-  // Get public.users data with disabled RLS policy
-  const { data: publicUser } = await supabase
+  // Get public.users data with organization details
+  const { data: publicUser, error } = await supabase
     .from('users')
-    .select('*')
+    .select(`
+      *,
+      organization:organization_id (*)
+    `)
     .eq('id', user.id)
     .single();
 
@@ -23,22 +26,22 @@ export default async function ProfilePage() {
       
       <div className="space-y-4 mb-8">
         <div className="grid grid-cols-2 gap-2">
-          <div className="font-medium text-blue-600">Email</div>
+          <div className="font-medium text-accent">Email</div>
           <div>{user.email}</div>
           
-          <div className="font-medium text-blue-600">Full Name</div>
+          <div className="font-medium text-accent">Full Name</div>
           <div>{publicUser?.full_name || user.user_metadata.full_name}</div>
           
-          <div className="font-medium text-blue-600">Organization</div>
-          <div>{publicUser?.organization || 'Not specified'}</div>
+          <div className="font-medium text-accent">Organization</div>
+          <div>{publicUser?.organization?.name || 'Not specified'}</div>
           
-          <div className="font-medium text-blue-600">Role</div>
+          <div className="font-medium text-accent">Role</div>
           <div>{publicUser?.role || 'Not specified'}</div>
           
-          <div className="font-medium text-blue-600">Last Sign In</div>
+          <div className="font-medium text-accent">Last Sign In</div>
           <div>{new Date(user.last_sign_in_at || '').toLocaleString()}</div>
           
-          <div className="font-medium text-blue-600">Account Created</div>
+          <div className="font-medium text-accent">Account Created</div>
           <div>{new Date(user.created_at).toLocaleString()}</div>
         </div>
       </div>
@@ -47,7 +50,7 @@ export default async function ProfilePage() {
         <Link href="/reset-password">
           <Button
             variant="outline"
-            className="w-full hover:text-blue-600 hover:border-blue-600"
+            className="w-full"
           >
             Reset Password
           </Button>
