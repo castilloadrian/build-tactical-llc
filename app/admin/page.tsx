@@ -32,9 +32,32 @@ export default async function AdminPage() {
     .order('full_name');
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="container mx-auto py-10 px-4">
       <h1 className="text-2xl font-bold mb-4">Admin Dashboard</h1>
-      <div className="overflow-x-auto rounded-lg border border-primary/20">
+      
+      {/* Mobile card view */}
+      <div className="md:hidden space-y-4">
+        {users?.map((user) => (
+          <div key={user.id} className="bg-background p-4 rounded-lg border border-primary/20 hover:bg-primary/5">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="text-sm font-medium text-primary">Name</div>
+              <div className="text-sm break-words">{user.full_name || 'N/A'}</div>
+              
+              <div className="text-sm font-medium text-primary">Email</div>
+              <div className="text-sm break-all">{user.email || 'N/A'}</div>
+              
+              <div className="text-sm font-medium text-primary">Organization</div>
+              <div className="text-sm break-words">{publicUser?.organization?.name || 'N/A'}</div>
+              
+              <div className="text-sm font-medium text-primary">Role</div>
+              <div className="text-sm break-words">{user.role || 'N/A'}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop table view */}
+      <div className="hidden md:block overflow-x-auto rounded-lg border border-primary/20">
         <table className="min-w-full divide-y divide-primary/10">
           <thead className="bg-primary/5">
             <tr>
