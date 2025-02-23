@@ -24,8 +24,14 @@ export default function DashboardPage() {
     };
     getUser();
   }, []);
-  console.log(user);
 
+  // Add new useEffect to handle org changes
+  useEffect(() => {
+    console.log('Selected organization changed:', selectedOrg);
+    // TODO: Fetch org-specific data here
+  }, [selectedOrg]);
+
+  
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
