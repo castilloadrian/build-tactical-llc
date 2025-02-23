@@ -52,7 +52,7 @@ export function Navigation({ user }: NavigationProps) {
   }
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-4 px-4 md:px-0">
       <Popover>
         <PopoverTrigger asChild>
           <Button variant="ghost" className="relative h-8 w-8 rounded-full">
