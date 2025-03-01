@@ -1,57 +1,197 @@
-import { createClient } from '@/utils/supabase/server';
-import { redirect } from 'next/navigation';
-import { notFound } from 'next/navigation';
+'use client';
 
-export default async function AdminPage() {
-  const supabase = await createClient();
-  
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
-    redirect('/sign-in');
-  }
+import { createClient } from '@/utils/supabase/client';
+import { Button } from "@/components/ui/button";
+import { CreateOrganizationModal } from '@/components/create-organization-modal';
+import { CreateProjectModal } from '@/components/create-project-modal';
+import { useState, useEffect } from 'react';
+import { User } from '@supabase/supabase-js';
 
-  // Get public.users data with organization details
-  const { data: publicUser, error } = await supabase
-    .from('users')
-    .select(`
-      *,
-      organization:organization_id (*)
-    `)
-    .eq('id', user.id)
-    .single();
-  
-  if (publicUser?.role !== 'Admin') {
-    notFound();
-  }
+interface UserData {
+  id: string;
+  full_name: string;
+  email: string;
+  role: string;
+  organization_id: string;
+  organization?: {
+    id: string;
+    name: string;
+    description: string;
+  };
+}
 
-  // Get all users
-  const { data: users } = await supabase
-    .from('users')
-    .select('*')
-    .order('full_name');
+interface Organization {
+  id: string;
+  name: string;
+  description: string;
+  created_at: string;
+}
+
+interface Project {
+  id: string;
+  name: string;
+  description: string;
+  status: string;
+  organization_id: string;
+  created_at: string;
+  organization?: {
+    name: string;
+  };
+}
+
+export default function AdminPage() {
+  const [isOrgModalOpen, setIsOrgModalOpen] = useState(false);
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [publicUser, setPublicUser] = useState<UserData | null>(null);
+  const [users, setUsers] = useState<UserData[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const supabase = createClient();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      // Check authentication
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        window.location.href = '/sign-in';
+        return;
+      }
+      
+      setUser(user);
+
+      // Get public.users data with organization details
+      const { data: publicUserData, error } = await supabase
+        .from('users')
+        .select(`
+          *,
+          organization:organization_id (*)
+        `)
+        .eq('id', user.id)
+        .single();
+      
+      if (publicUserData?.role !== 'Admin') {
+        window.location.href = '/404';
+        return;
+      }
+      
+      setPublicUser(publicUserData as UserData);
+
+      // Get all users
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('*')
+        .order('full_name');
+      
+      setUsers(usersData as UserData[] || []);
+        
+      // Get all projects with organization details
+      const { data: projectsData } = await supabase
+        .from('projects')
+        .select(`
+          id,
+          name,
+          description,
+          status,
+          organization_id,
+          created_at,
+          organization:organization_id (
+            name
+          )
+        `)
+        .order('name');
+      
+      if (projectsData) {
+        const typedProjects: Project[] = projectsData.map((project: any) => ({
+          id: project.id,
+          name: project.name,
+          description: project.description,
+          status: project.status,
+          organization_id: project.organization_id,
+          created_at: project.created_at,
+          organization: project.organization ? { name: project.organization.name } : undefined
+        }));
+        setProjects(typedProjects);
+      }
+        
+      // Get all organizations
+      const { data: orgsData } = await supabase
+        .from('organizations')
+        .select('*')
+        .order('name');
+      
+      setOrganizations(orgsData as Organization[] || []);
+    };
+
+    fetchData();
+  }, []);
+
+  const handleCreateOrganization = async (data: { name: string; description: string }) => {
+    const { data: newOrg, error } = await supabase
+      .from('organizations')
+      .insert([
+        { 
+          name: data.name,
+          description: data.description
+        }
+      ])
+      .select()
+      .single();
     
-  // Get all projects with organization details
-  const { data: projects } = await supabase
-    .from('projects')
-    .select(`
-      id,
-      name,
-      description,
-      status,
-      organization_id,
-      created_at,
-      organization:organization_id (
-        name
-      )
-    `)
-    .order('name');
+    if (error) {
+      console.error('Error creating organization:', error);
+      return;
+    }
     
-  // Get all organizations
-  const { data: organizations } = await supabase
-    .from('organizations')
-    .select('*')
-    .order('name');
+    // Update the organizations list
+    setOrganizations([...organizations, newOrg as Organization]);
+  };
+
+  const handleCreateProject = async (data: { 
+    name: string; 
+    description: string; 
+    organization_id: string; 
+    status: string 
+  }) => {
+    const { data: newProject, error } = await supabase
+      .from('projects')
+      .insert([
+        { 
+          name: data.name,
+          description: data.description,
+          organization_id: data.organization_id,
+          status: data.status
+        }
+      ])
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating project:', error);
+      return;
+    }
+    
+    // Get the organization name for the new project
+    const org = organizations.find(o => o.id === data.organization_id);
+    
+    // Update the projects list with properly typed project
+    const typedProject: Project = {
+      id: newProject.id,
+      name: newProject.name,
+      description: newProject.description,
+      status: newProject.status,
+      organization_id: newProject.organization_id,
+      created_at: newProject.created_at,
+      organization: { name: org?.name || 'N/A' }
+    };
+    
+    setProjects([...projects, typedProject]);
+  };
+
+  if (!user || !publicUser) {
+    return <div className="p-10 text-center">Loading...</div>;
+  }
 
   return (
     <div className="container mx-auto py-10 px-4">
@@ -73,7 +213,7 @@ export default async function AdminPage() {
                 <div className="text-sm break-all">{user.email || 'N/A'}</div>
                 
                 <div className="text-sm font-medium text-primary">Organization</div>
-                <div className="text-sm break-words">{publicUser?.organization?.name || 'N/A'}</div>
+                <div className="text-sm break-words">{user.organization?.name || 'N/A'}</div>
                 
                 <div className="text-sm font-medium text-primary">Role</div>
                 <div className="text-sm break-words">{user.role || 'N/A'}</div>
@@ -98,7 +238,7 @@ export default async function AdminPage() {
                 <tr key={user.id} className="hover:bg-primary/5">
                   <td className="px-6 py-4 whitespace-nowrap">{user.full_name || 'N/A'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{user.email || 'N/A'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{publicUser?.organization?.name || 'N/A'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{user.organization?.name || 'N/A'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{user.role || 'N/A'}</td>
                 </tr>
               ))}
@@ -109,7 +249,16 @@ export default async function AdminPage() {
       
       {/* Organization Management Section */}
       <section className="mb-12">
-        <h2 className="text-xl font-bold mb-4">Organization Management</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Organization Management</h2>
+          <Button 
+            variant="default" 
+            size="sm" 
+            onClick={() => setIsOrgModalOpen(true)}
+          >
+            Create Organization
+          </Button>
+        </div>
         
         {/* Mobile card view */}
         <div className="md:hidden space-y-4">
@@ -158,7 +307,16 @@ export default async function AdminPage() {
       
       {/* Project Management Section */}
       <section className="mb-12">
-        <h2 className="text-xl font-bold mb-4">Project Management</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Project Management</h2>
+          <Button 
+            variant="default" 
+            size="sm" 
+            onClick={() => setIsProjectModalOpen(true)}
+          >
+            Create Project
+          </Button>
+        </div>
         
         {/* Mobile card view */}
         <div className="md:hidden space-y-4">
@@ -173,7 +331,7 @@ export default async function AdminPage() {
                 
                 <div className="text-sm font-medium text-primary">Organization</div>
                 <div className="text-sm break-words">
-                  {(project.organization as any)?.name || 'N/A'}
+                  {project.organization?.name || 'N/A'}
                 </div>
                 
                 <div className="text-sm font-medium text-primary">Status</div>
@@ -200,7 +358,7 @@ export default async function AdminPage() {
                   <td className="px-6 py-4 whitespace-nowrap">{project.name || 'N/A'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{project.description || 'N/A'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {(project.organization as any)?.name || 'N/A'}
+                    {project.organization?.name || 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">{project.status || 'N/A'}</td>
                 </tr>
@@ -209,6 +367,20 @@ export default async function AdminPage() {
           </table>
         </div>
       </section>
+
+      {/* Modals */}
+      <CreateOrganizationModal
+        isOpen={isOrgModalOpen}
+        onClose={() => setIsOrgModalOpen(false)}
+        onSubmit={handleCreateOrganization}
+      />
+      
+      <CreateProjectModal
+        isOpen={isProjectModalOpen}
+        onClose={() => setIsProjectModalOpen(false)}
+        onSubmit={handleCreateProject}
+        organizations={organizations}
+      />
     </div>
   );
 } 
