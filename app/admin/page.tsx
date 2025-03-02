@@ -5,6 +5,24 @@ import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { CreateOrganizationModal } from '@/components/create-organization-modal';
 import { CreateProjectModal } from '@/components/create-project-modal';
+import { Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 
@@ -44,6 +62,8 @@ export default function AdminPage() {
   const router = useRouter();
   const [isOrgModalOpen, setIsOrgModalOpen] = useState(false);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{type: 'organization' | 'project', id: string, name: string} | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [publicUser, setPublicUser] = useState<UserData | null>(null);
   const [users, setUsers] = useState<UserData[]>([]);
@@ -149,7 +169,9 @@ export default function AdminPage() {
       .single();
     
     if (error) {
-      console.error('Error creating organization:', error);
+      console.error('Error creating organization:', error.message);
+      console.error('Error details:', error);
+      alert(`Failed to create organization: ${error.message}`);
       return;
     }
     
@@ -198,6 +220,92 @@ export default function AdminPage() {
     setProjects([...projects, typedProject]);
   };
 
+  const handleDeleteItem = async () => {
+    if (!itemToDelete) return;
+    
+    try {
+      if (itemToDelete.type === 'organization') {
+        const { error } = await supabase
+          .from('organizations')
+          .delete()
+          .eq('id', itemToDelete.id);
+          
+        if (error) throw error;
+        
+        // Update state to remove the deleted organization
+        setOrganizations(organizations.filter(org => org.id !== itemToDelete.id));
+        
+        // Also remove any projects associated with this organization
+        setProjects(projects.filter(project => project.organization_id !== itemToDelete.id));
+      } else {
+        const { error } = await supabase
+          .from('projects')
+          .delete()
+          .eq('id', itemToDelete.id);
+          
+        if (error) throw error;
+        
+        // Update state to remove the deleted project
+        setProjects(projects.filter(project => project.id !== itemToDelete.id));
+      }
+    } catch (error: any) {
+      console.error(`Error deleting ${itemToDelete.type}:`, error.message);
+      alert(`Failed to delete ${itemToDelete.type}: ${error.message}`);
+    } finally {
+      setDeleteConfirmOpen(false);
+      setItemToDelete(null);
+    }
+  };
+
+  const confirmDelete = (type: 'organization' | 'project', id: string, name: string) => {
+    setItemToDelete({ type, id, name });
+    setDeleteConfirmOpen(true);
+  };
+
+  // Add this function to handle status changes
+  const handleStatusChange = async (projectId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ status: newStatus })
+        .eq('id', projectId);
+        
+      if (error) throw error;
+      
+      // Update the projects list with the new status
+      setProjects(projects.map(project => 
+        project.id === projectId 
+          ? { ...project, status: newStatus } 
+          : project
+      ));
+    } catch (error: any) {
+      console.error('Error updating project status:', error.message);
+      alert(`Failed to update project status: ${error.message}`);
+    }
+  };
+
+  // Add this function to handle role changes
+  const handleRoleChange = async (userId: string, newRole: string) => {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ role: newRole })
+        .eq('id', userId);
+        
+      if (error) throw error;
+      
+      // Update the users list with the new role
+      setUsers(users.map(user => 
+        user.id === userId 
+          ? { ...user, role: newRole } 
+          : user
+      ));
+    } catch (error: any) {
+      console.error('Error updating user role:', error.message);
+      alert(`Failed to update user role: ${error.message}`);
+    }
+  };
+
   if (!user || !publicUser) {
     return <div className="p-10 text-center">Loading...</div>;
   }
@@ -225,7 +333,21 @@ export default function AdminPage() {
                 <div className="text-sm break-words">{user.organization?.name || 'N/A'}</div>
                 
                 <div className="text-sm font-medium text-primary">Role</div>
-                <div className="text-sm break-words">{user.role || 'N/A'}</div>
+                <div className="text-sm">
+                  <Select
+                    defaultValue={user.role}
+                    onValueChange={(value) => handleRoleChange(user.id, value)}
+                    disabled={user.id === publicUser?.id} // Prevent changing own role
+                  >
+                    <SelectTrigger className="w-full h-8 text-xs">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Admin">Admin</SelectItem>
+                      <SelectItem value="User">User</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
           ))}
@@ -248,7 +370,21 @@ export default function AdminPage() {
                   <td className="px-6 py-4 whitespace-nowrap">{user.full_name || 'N/A'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{user.email || 'N/A'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{user.organization?.name || 'N/A'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{user.role || 'N/A'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <Select
+                      defaultValue={user.role}
+                      onValueChange={(value) => handleRoleChange(user.id, value)}
+                      disabled={user.id === publicUser?.id} // Prevent changing own role
+                    >
+                      <SelectTrigger className="w-full max-w-[180px] h-8">
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Admin">Admin</SelectItem>
+                        <SelectItem value="User">User</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -297,6 +433,7 @@ export default function AdminPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Name</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Description</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Created</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-background divide-y divide-primary/10">
@@ -306,6 +443,16 @@ export default function AdminPage() {
                   <td className="px-6 py-4 whitespace-nowrap">{org.description || 'N/A'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {org.created_at ? new Date(org.created_at).toLocaleDateString() : 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => confirmDelete('organization', org.id, org.name)}
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -344,7 +491,22 @@ export default function AdminPage() {
                 </div>
                 
                 <div className="text-sm font-medium text-primary">Status</div>
-                <div className="text-sm break-words">{project.status || 'N/A'}</div>
+                <div className="text-sm">
+                  <Select
+                    defaultValue={project.status}
+                    onValueChange={(value) => handleStatusChange(project.id, value)}
+                  >
+                    <SelectTrigger className="w-full h-8 text-xs">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="On Hold">On Hold</SelectItem>
+                      <SelectItem value="Completed">Completed</SelectItem>
+                      <SelectItem value="Cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
           ))}
@@ -359,6 +521,7 @@ export default function AdminPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Description</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Organization</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-background divide-y divide-primary/10">
@@ -369,7 +532,32 @@ export default function AdminPage() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     {project.organization?.name || 'N/A'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">{project.status || 'N/A'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <Select
+                      defaultValue={project.status}
+                      onValueChange={(value) => handleStatusChange(project.id, value)}
+                    >
+                      <SelectTrigger className="w-full max-w-[180px] h-8">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="On Hold">On Hold</SelectItem>
+                        <SelectItem value="Completed">Completed</SelectItem>
+                        <SelectItem value="Cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => confirmDelete('project', project.id, project.name)}
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -390,6 +578,29 @@ export default function AdminPage() {
         onSubmit={handleCreateProject}
         organizations={organizations}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the {itemToDelete?.type} "{itemToDelete?.name}".
+              {itemToDelete?.type === 'organization' && 
+                " This may also affect any projects associated with this organization."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteItem}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 } 
