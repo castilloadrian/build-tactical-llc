@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/utils/supabase/client';
+import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { CreateOrganizationModal } from '@/components/create-organization-modal';
 import { CreateProjectModal } from '@/components/create-project-modal';
@@ -40,6 +41,7 @@ interface Project {
 }
 
 export default function AdminPage() {
+  const router = useRouter();
   const [isOrgModalOpen, setIsOrgModalOpen] = useState(false);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
@@ -55,7 +57,7 @@ export default function AdminPage() {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        window.location.href = '/sign-in';
+        router.push('/sign-in');
         return;
       }
       
@@ -72,7 +74,7 @@ export default function AdminPage() {
         .single();
       
       if (publicUserData?.role !== 'Admin') {
-        window.location.href = '/404';
+        router.push('/404');
         return;
       }
       
@@ -81,7 +83,14 @@ export default function AdminPage() {
       // Get all users
       const { data: usersData } = await supabase
         .from('users')
-        .select('*')
+        .select(`
+          *,
+          organization:organization_id (
+            id,
+            name,
+            description
+          )
+        `)
         .order('full_name');
       
       setUsers(usersData as UserData[] || []);
