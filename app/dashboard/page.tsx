@@ -150,43 +150,45 @@ export default function DashboardPage() {
         )}
 
         {/* Organization Stats */}
-        <Card className="border-primary/20">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xl text-primary">Organization Statistics</CardTitle>
-            <CardDescription className="text-base">Overall performance metrics</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-              <Card className="border-primary/20">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-medium text-primary">Total Projects</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-primary">12</div>
-                  <p className="text-sm text-muted-foreground mt-1">3 active</p>
-                </CardContent>
-              </Card>
-              <Card className="border-primary/20">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-medium text-primary">Total Budget</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-primary">$234.5k</div>
-                  <p className="text-sm text-muted-foreground mt-1">$45k this month</p>
-                </CardContent>
-              </Card>
-              <Card className="border-primary/20">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-medium text-primary">Team Members</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-primary">24</div>
-                  <p className="text-sm text-muted-foreground mt-1">Across all projects</p>
-                </CardContent>
-              </Card>
-            </div>
-          </CardContent>
-        </Card>
+        {selectedOrg && (
+          <Card className="border-primary/20">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xl text-primary">Organization Statistics</CardTitle>
+              <CardDescription className="text-base">Overall performance metrics</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                <Card className="border-primary/20">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base font-medium text-primary">Total Projects</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-primary">12</div>
+                    <p className="text-sm text-muted-foreground mt-1">3 active</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-primary/20">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base font-medium text-primary">Total Budget</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-primary">$234.5k</div>
+                    <p className="text-sm text-muted-foreground mt-1">$45k this month</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-primary/20">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base font-medium text-primary">Team Members</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-primary">24</div>
+                    <p className="text-sm text-muted-foreground mt-1">Across all projects</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

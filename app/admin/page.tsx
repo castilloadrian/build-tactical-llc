@@ -26,35 +26,41 @@ import {
 import { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 
+interface ItemToDelete {
+  type: 'organization' | 'project';
+  id: number;
+  name: string;
+}
+
 interface UserData {
   id: string;
-  full_name: string;
-  email: string;
-  role: string;
-  organization_id: string;
-  organization?: {
-    id: string;
-    name: string;
-    description: string;
-  };
+  full_name: string | null;
+  email: string | null;
+  role: string | null;
+  organizations?: {
+    id: number;
+    name: string | null;
+    description: string | null;
+    created_at: string;
+  }[];
 }
 
 interface Organization {
-  id: string;
-  name: string;
-  description: string;
+  id: number;
+  name: string | null;
+  description: string | null;
   created_at: string;
 }
 
 interface Project {
-  id: string;
-  name: string;
-  description: string;
-  status: string;
-  organization_id: string;
+  id: number;
+  name: string | null;
+  description: string | null;
+  status: string | null;
+  organization_id: number;
   created_at: string;
   organization?: {
-    name: string;
+    name: string | null;
   };
 }
 
@@ -63,7 +69,7 @@ export default function AdminPage() {
   const [isOrgModalOpen, setIsOrgModalOpen] = useState(false);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<{type: 'organization' | 'project', id: string, name: string} | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<ItemToDelete | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [publicUser, setPublicUser] = useState<UserData | null>(null);
   const [users, setUsers] = useState<UserData[]>([]);
@@ -83,37 +89,65 @@ export default function AdminPage() {
       
       setUser(user);
 
-      // Get public.users data with organization details
+      // Get public.users data with organization details through user-org junction table
       const { data: publicUserData, error } = await supabase
         .from('users')
         .select(`
           *,
-          organization:organization_id (*)
+          organizations:"user-org"(
+            organization:organizations(*)
+          )
         `)
         .eq('id', user.id)
         .single();
       
-      if (publicUserData?.role !== 'Admin') {
+      if (!publicUserData || publicUserData.role !== 'Admin') {
         router.push('/404');
         return;
       }
       
-      setPublicUser(publicUserData as UserData);
+      // Transform the data to match our interface
+      const userData: UserData = {
+        id: publicUserData.id,
+        full_name: publicUserData.full_name,
+        email: publicUserData.email,
+        role: publicUserData.role,
+        organizations: publicUserData.organizations?.map((org: any) => ({
+          id: org.organization.id,
+          name: org.organization.name,
+          description: org.organization.description,
+          created_at: org.organization.created_at
+        }))
+      };
+      
+      setPublicUser(userData);
 
-      // Get all users
+      // Get all users with their organizations
       const { data: usersData } = await supabase
         .from('users')
         .select(`
           *,
-          organization:organization_id (
-            id,
-            name,
-            description
+          organizations:"user-org"(
+            organization:organizations(*)
           )
         `)
         .order('full_name');
       
-      setUsers(usersData as UserData[] || []);
+      // Transform the users data to match our interface
+      const transformedUsers = usersData?.map((user: any) => ({
+        id: user.id,
+        full_name: user.full_name,
+        email: user.email,
+        role: user.role,
+        organizations: user.organizations?.map((org: any) => ({
+          id: org.organization.id,
+          name: org.organization.name,
+          description: org.organization.description,
+          created_at: org.organization.created_at
+        }))
+      })) || [];
+      
+      setUsers(transformedUsers);
         
       // Get all projects with organization details
       const { data: projectsData } = await supabase
@@ -125,7 +159,7 @@ export default function AdminPage() {
           status,
           organization_id,
           created_at,
-          organization:organization_id (
+          organization:organizations!inner(
             name
           )
         `)
@@ -161,8 +195,8 @@ export default function AdminPage() {
       .from('organizations')
       .insert([
         { 
-          name: data.name,
-          description: data.description
+          name: data.name || null,
+          description: data.description || null
         }
       ])
       .select()
@@ -176,23 +210,25 @@ export default function AdminPage() {
     }
     
     // Update the organizations list
-    setOrganizations([...organizations, newOrg as Organization]);
+    if (newOrg) {
+      setOrganizations([...organizations, newOrg as Organization]);
+    }
   };
 
   const handleCreateProject = async (data: { 
     name: string; 
     description: string; 
-    organization_id: string; 
+    organization_id: number; 
     status: string 
   }) => {
     const { data: newProject, error } = await supabase
       .from('projects')
       .insert([
         { 
-          name: data.name,
-          description: data.description,
+          name: data.name || null,
+          description: data.description || null,
           organization_id: data.organization_id,
-          status: data.status
+          status: data.status || null
         }
       ])
       .select()
@@ -203,21 +239,23 @@ export default function AdminPage() {
       return;
     }
     
-    // Get the organization name for the new project
-    const org = organizations.find(o => o.id === data.organization_id);
-    
-    // Update the projects list with properly typed project
-    const typedProject: Project = {
-      id: newProject.id,
-      name: newProject.name,
-      description: newProject.description,
-      status: newProject.status,
-      organization_id: newProject.organization_id,
-      created_at: newProject.created_at,
-      organization: { name: org?.name || 'N/A' }
-    };
-    
-    setProjects([...projects, typedProject]);
+    if (newProject) {
+      // Get the organization name for the new project
+      const org = organizations.find(o => o.id === data.organization_id);
+      
+      // Update the projects list with properly typed project
+      const typedProject: Project = {
+        id: newProject.id,
+        name: newProject.name,
+        description: newProject.description,
+        status: newProject.status,
+        organization_id: newProject.organization_id,
+        created_at: newProject.created_at,
+        organization: org ? { name: org.name } : undefined
+      };
+      
+      setProjects([...projects, typedProject]);
+    }
   };
 
   const handleDeleteItem = async () => {
@@ -257,13 +295,13 @@ export default function AdminPage() {
     }
   };
 
-  const confirmDelete = (type: 'organization' | 'project', id: string, name: string) => {
+  const confirmDelete = (type: 'organization' | 'project', id: number, name: string) => {
     setItemToDelete({ type, id, name });
     setDeleteConfirmOpen(true);
   };
 
   // Add this function to handle status changes
-  const handleStatusChange = async (projectId: string, newStatus: string) => {
+  const handleStatusChange = async (projectId: number, newStatus: string) => {
     try {
       const { error } = await supabase
         .from('projects')
@@ -330,12 +368,14 @@ export default function AdminPage() {
                 <div className="text-sm break-all">{user.email || 'N/A'}</div>
                 
                 <div className="text-sm font-medium text-primary">Organization</div>
-                <div className="text-sm break-words">{user.organization?.name || 'N/A'}</div>
+                <div className="text-sm break-words">
+                  {user.organizations?.map(org => org.name || 'N/A').join(', ') || 'N/A'}
+                </div>
                 
                 <div className="text-sm font-medium text-primary">Role</div>
                 <div className="text-sm">
                   <Select
-                    defaultValue={user.role}
+                    defaultValue={user.role ?? undefined}
                     onValueChange={(value) => handleRoleChange(user.id, value)}
                     disabled={user.id === publicUser?.id} // Prevent changing own role
                   >
@@ -369,10 +409,12 @@ export default function AdminPage() {
                 <tr key={user.id} className="hover:bg-primary/5">
                   <td className="px-6 py-4 whitespace-nowrap">{user.full_name || 'N/A'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{user.email || 'N/A'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{user.organization?.name || 'N/A'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {user.organizations?.map(org => org.name || 'N/A').join(', ') || 'N/A'}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <Select
-                      defaultValue={user.role}
+                      defaultValue={user.role ?? undefined}
                       onValueChange={(value) => handleRoleChange(user.id, value)}
                       disabled={user.id === publicUser?.id} // Prevent changing own role
                     >
@@ -448,7 +490,7 @@ export default function AdminPage() {
                     <Button 
                       variant="ghost" 
                       size="icon"
-                      onClick={() => confirmDelete('organization', org.id, org.name)}
+                      onClick={() => confirmDelete('organization', org.id, org.name ?? 'Unnamed Organization')}
                       className="h-8 w-8 text-muted-foreground hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -493,7 +535,7 @@ export default function AdminPage() {
                 <div className="text-sm font-medium text-primary">Status</div>
                 <div className="text-sm">
                   <Select
-                    defaultValue={project.status}
+                    defaultValue={project.status ?? undefined}
                     onValueChange={(value) => handleStatusChange(project.id, value)}
                   >
                     <SelectTrigger className="w-full h-8 text-xs">
@@ -534,7 +576,7 @@ export default function AdminPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <Select
-                      defaultValue={project.status}
+                      defaultValue={project.status ?? undefined}
                       onValueChange={(value) => handleStatusChange(project.id, value)}
                     >
                       <SelectTrigger className="w-full max-w-[180px] h-8">
@@ -552,7 +594,7 @@ export default function AdminPage() {
                     <Button 
                       variant="ghost" 
                       size="icon"
-                      onClick={() => confirmDelete('project', project.id, project.name)}
+                      onClick={() => confirmDelete('project', project.id, project.name ?? 'Unnamed Project')}
                       className="h-8 w-8 text-muted-foreground hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
