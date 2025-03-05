@@ -5,14 +5,41 @@ import { Progress } from "@/components/ui/progress";
 import { useState, useEffect } from 'react';
 import { ProjectDetailCard } from '../../components/project-detail-card';
 import { User } from '@supabase/supabase-js';
-import { Upload } from "lucide-react";
+import { List, Upload } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const supabase = createClient();
   const [selectedProject, setSelectedProject] = useState<any>(null);
-  const [selectedOrg, setSelectedOrg] = useState('ABC Construction');
+  const [selectedOrg, setSelectedOrg] = useState<any>(null);
+  const [orgsList, setOrgsList] = useState<any[]>([]);
+  const [projectsList, setProjectsList] = useState<any[]>([]);
+
+  const getOrgs = async () => {
+    // First get user's organization memberships
+    const { data: userOrgs } = await supabase
+      .from('user-org')
+      .select('*');
+
+    if (userOrgs && userOrgs.length > 0) {
+      // Get organization details for each org_id
+      console.log(userOrgs);
+
+      const orgIds = userOrgs.map(uo => uo.org_id);
+      const { data: organizations } = await supabase
+        .from('organizations')
+        .select('id, name')
+        .in('id', orgIds);
+
+        setOrgsList(organizations || []);
+    }
+  };
+  const getProjects = async () => {
+    const {data: projects} = await supabase.from('projects').select('*').eq('organization_id', selectedOrg);
+    console.log(projects);
+    setProjectsList(projects || []);
+  }
 
   useEffect(() => {
     const getUser = async () => {
@@ -25,12 +52,13 @@ export default function DashboardPage() {
     getUser();
   }, []);
 
-  // Add new useEffect to handle org changes
   useEffect(() => {
-    console.log('Selected organization changed:', selectedOrg);
-    // TODO: Fetch org-specific data here
-  }, [selectedOrg]);
-
+    getOrgs();
+  },[user]);
+  
+  useEffect(() => {
+    getProjects();
+  },[selectedOrg]);
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -52,9 +80,9 @@ export default function DashboardPage() {
               <SelectValue placeholder="Select organization" />
             </SelectTrigger>
             <SelectContent>
-              {['ABC Construction', 'XYZ Builders', 'City Contractors'].map((org) => (
-                <SelectItem key={org} value={org}>
-                  {org}
+              {orgsList.map((org: any) => (
+                <SelectItem key={org.id} value={org.id}>
+                  {org.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -106,12 +134,12 @@ export default function DashboardPage() {
 
           {/* Projects Grid */}
           <div className="flex flex-col sm:flex-row sm:space-x-6 space-y-4 sm:space-y-0 overflow-x-auto pb-4 mb-6">
-            {['Project Alpha', 'Project Beta', 'Project Gamma'].map((project) => (
+            {projectsList.map((project) => (
               <Card 
-                key={project}
+                key={project.name}
                 className="cursor-pointer hover:shadow-lg transition-shadow duration-200 border-primary/20 sm:min-w-[280px]"
                 onClick={() => setSelectedProject({
-                  name: project,
+                  name: project.name,
                   progress: 65,
                   tasks: '24/36',
                   budget: '$12.4k',
@@ -119,7 +147,7 @@ export default function DashboardPage() {
                 })}
               >
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg text-primary">{project}</CardTitle>
+                  <CardTitle className="text-lg text-primary">{project.name}</CardTitle>
                   <CardDescription>Last updated 2 days ago</CardDescription>
                 </CardHeader>
                 <CardContent>
