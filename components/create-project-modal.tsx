@@ -15,8 +15,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useEffect } from "react";
 
 interface Organization {
-  id: string;
-  name: string;
+  id: number;
+  name: string | null;
+  description: string | null;
+  created_at: string;
 }
 
 interface CreateProjectModalProps {
@@ -42,7 +44,7 @@ export function CreateProjectModal({
     if (isOpen) {
       setName("");
       setDescription("");
-      setOrganizationId(organizations[0]?.id || "");
+      setOrganizationId(organizations[0]?.id.toString() || "");
       setStatus("Planning");
     }
   }, [isOpen, organizations]);
@@ -95,8 +97,8 @@ export function CreateProjectModal({
               </SelectTrigger>
               <SelectContent>
                 {organizations.map((org) => (
-                  <SelectItem key={org.id} value={org.id}>
-                    {org.name}
+                  <SelectItem key={org.id} value={org.id.toString()}>
+                    {org.name || 'No Name'}
                   </SelectItem>
                 ))}
               </SelectContent>
