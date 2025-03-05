@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
+import { UserOrganizationsPopover } from '@/components/user-organizations-popover';
 
 interface ItemToDelete {
   type: 'organization' | 'project';
@@ -344,6 +345,35 @@ export default function AdminPage() {
     }
   };
 
+  const refreshUserData = async () => {
+    // Get all users with their organizations
+    const { data: usersData } = await supabase
+      .from('users')
+      .select(`
+        *,
+        organizations:"user-org"(
+          organization:organizations(*)
+        )
+      `)
+      .order('full_name');
+    
+    // Transform the users data to match our interface
+    const transformedUsers = usersData?.map((user: any) => ({
+      id: user.id,
+      full_name: user.full_name,
+      email: user.email,
+      role: user.role,
+      organizations: user.organizations?.map((org: any) => ({
+        id: org.organization.id,
+        name: org.organization.name,
+        description: org.organization.description,
+        created_at: org.organization.created_at
+      }))
+    })) || [];
+    
+    setUsers(transformedUsers);
+  };
+
   if (!user || !publicUser) {
     return <div className="p-10 text-center">Loading...</div>;
   }
@@ -368,8 +398,16 @@ export default function AdminPage() {
                 <div className="text-sm break-all">{user.email || 'N/A'}</div>
                 
                 <div className="text-sm font-medium text-primary">Organization</div>
-                <div className="text-sm break-words">
-                  {user.organizations?.map(org => org.name || 'N/A').join(', ') || 'N/A'}
+                <div className="text-sm break-words flex items-center gap-2">
+                  <span className="text-muted-foreground">
+                    {user.organizations?.length || 0} organization(s)
+                  </span>
+                  <UserOrganizationsPopover
+                    userId={user.id}
+                    userOrganizations={user.organizations || []}
+                    allOrganizations={organizations}
+                    onUpdate={refreshUserData}
+                  />
                 </div>
                 
                 <div className="text-sm font-medium text-primary">Role</div>
@@ -400,7 +438,7 @@ export default function AdminPage() {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Name</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Organization</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Organizations</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Role</th>
               </tr>
             </thead>
@@ -410,13 +448,23 @@ export default function AdminPage() {
                   <td className="px-6 py-4 whitespace-nowrap">{user.full_name || 'N/A'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{user.email || 'N/A'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {user.organizations?.map(org => org.name || 'N/A').join(', ') || 'N/A'}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">
+                        {user.organizations?.length || 0} organization(s)
+                      </span>
+                      <UserOrganizationsPopover
+                        userId={user.id}
+                        userOrganizations={user.organizations || []}
+                        allOrganizations={organizations}
+                        onUpdate={refreshUserData}
+                      />
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <Select
                       defaultValue={user.role ?? undefined}
                       onValueChange={(value) => handleRoleChange(user.id, value)}
-                      disabled={user.id === publicUser?.id} // Prevent changing own role
+                      disabled={user.id === publicUser?.id}
                     >
                       <SelectTrigger className="w-full max-w-[180px] h-8">
                         <SelectValue placeholder="Select role" />
