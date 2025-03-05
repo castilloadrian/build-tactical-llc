@@ -218,7 +218,7 @@ export default function AdminPage() {
   const handleCreateProject = async (data: { 
     name: string; 
     description: string; 
-    organization_id: number; 
+    organization_id: string; 
     status: string 
   }) => {
     const { data: newProject, error } = await supabase
@@ -227,7 +227,7 @@ export default function AdminPage() {
         { 
           name: data.name || null,
           description: data.description || null,
-          organization_id: data.organization_id,
+          organization_id: parseInt(data.organization_id),
           status: data.status || null
         }
       ])
@@ -241,7 +241,7 @@ export default function AdminPage() {
     
     if (newProject) {
       // Get the organization name for the new project
-      const org = organizations.find(o => o.id === data.organization_id);
+      const org = organizations.find(o => o.id === parseInt(data.organization_id));
       
       // Update the projects list with properly typed project
       const typedProject: Project = {
