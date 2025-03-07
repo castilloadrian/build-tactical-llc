@@ -96,6 +96,7 @@ export default function DashboardPage() {
   const getCurrentProject = () => {
     const project = projectsList.find(p => p.id.toString() === selectedProject);
     return project ? {
+      id: project.id,
       name: project.name,
       progress: 0, // You can add these fields to your project data if needed
       tasks: '0/0',

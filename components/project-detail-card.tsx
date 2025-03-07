@@ -5,22 +5,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Slider } from "@/components/ui/slider";
 import { Plus, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import { TaskList } from "@/components/task-list";
+import { User } from '@supabase/supabase-js';
+import { createClient } from "@/utils/supabase/client";
 
-interface ProjectDetailCardProps {
-  project: {
-    name: string;
-    progress: number;
-    tasks: string;
-    budget: string;
-    time: string;
-  };
-  isOpen: boolean;
-  onClose: () => void;
+
+interface Task {
+  id: number;
+  title: string;
+  description: string;
+  completed: boolean;
 }
 
 interface ExpenseRow {
@@ -30,11 +28,32 @@ interface ExpenseRow {
   date: string;
 }
 
+interface ProjectDetailCardProps {
+  project: {
+    id: number;
+    name: string;
+    tasks: string;
+    budget: string;
+    time: string;
+  };
+  isOpen: boolean;
+  onClose: () => void;
+}
+
 export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCardProps) {
-  const [progress, setProgress] = useState(project.progress);
+  const [tasks, setTasks] = useState<Task[]>([
+    { id: 0, title: '', description: '', completed: false }
+  ]);
   const [expenses, setExpenses] = useState<ExpenseRow[]>([
     { id: 1, description: '', amount: '', date: '' }
   ]);
+  const supabase = createClient();
+
+
+  // Calculate progress based on completed tasks
+  const progress = tasks.length > 0 
+    ? Math.round((tasks.filter(task => task.completed).length / tasks.length) * 100) 
+    : 0;
 
   const addExpenseRow = () => {
     const newId = expenses.length + 1;
@@ -51,9 +70,17 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
     setExpenses(expenses.filter(expense => expense.id !== id));
   };
 
-  const handleSave = () => {
-    console.log('Saving expenses:', expenses);
-    // TODO: Implement save functionality
+  const handleSave = async () => {
+
+
+    // for (const task of tasks) {
+    //   const { data: taskData, error: taskError } = await supabase.from('tasks').update({
+    //     project_id: project.id,
+    //     title: task.title,
+    //     description: task.description,
+    //     completed: task.completed
+    //   }).eq('id', task.id);
+    // }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,33 +99,53 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
         </DialogHeader>
         
         <div className="flex-1 space-y-8 overflow-y-auto pr-2">
-          {/* Project Overview */}
+          {/* Project Progress Wheel */}
           <div className="space-y-3">
             <h3 className="text-xl font-semibold text-primary">Project Progress</h3>
-            <Slider 
-              value={[progress]} 
-              onValueChange={(value) => setProgress(value[0])}
-              max={100} 
-              step={1}
-              className="py-6"
-            />
-            <div className="flex justify-between text-base text-muted-foreground">
-              <span>Progress: <span className="text-primary">{progress}%</span></span>
-              <span>Target: <span className="text-primary">100%</span></span>
+            <div className="flex justify-center items-center">
+              <div className="relative w-48 h-48">
+                <svg className="w-full h-full" viewBox="0 0 100 100">
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    fill="none"
+                    stroke="#e5e7eb"
+                    strokeWidth="12"
+                    className="opacity-30"
+                  />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="12"
+                    strokeLinecap="round"
+                    className="text-primary transition-all duration-300 ease-in-out"
+                    strokeDasharray={`${2 * Math.PI * 40}`}
+                    strokeDashoffset={`${2 * Math.PI * 40 * (1 - progress / 100)}`}
+                    transform="rotate(-90 50 50)"
+                  />
+                  <text
+                    x="50"
+                    y="50"
+                    textAnchor="middle"
+                    dy="0.3em"
+                    className="text-2xl font-bold fill-primary"
+                  >
+                    {progress}%
+                  </text>
+                </svg>
+              </div>
             </div>
           </div>
 
+          {/* Tasks Section */}
+          <TaskList tasks={tasks} onTasksChange={setTasks} />
+
           {/* Detailed Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="border-primary/20">
-              <CardHeader>
-                <CardTitle className="text-base text-primary">Tasks</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-primary">{project.tasks}</div>
-                <p className="text-base text-muted-foreground">Completion rate: 85%</p>
-              </CardContent>
-            </Card>
             <Card className="border-primary/20">
               <CardHeader>
                 <CardTitle className="text-base text-primary">Budget</CardTitle>
@@ -122,29 +169,12 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
           {/* Add File Upload Section */}
           <div className="space-y-3">
             <h3 className="text-xl font-semibold text-primary">Project Files</h3>
-            <label className="
-              block
-              min-h-[160px] 
-              rounded-lg 
-              border-2 
-              border-dashed 
-              border-primary/20
-              hover:border-primary/50
-              transition-colors
-              flex 
-              flex-col 
-              items-center 
-              justify-center 
-              gap-3
-              p-8
-              cursor-pointer
-              bg-background
-            ">
+            <label className="block min-h-[160px] rounded-lg border-2 border-dashed border-primary/20 hover:border-primary/50 transition-colors flex flex-col items-center justify-center gap-3 p-8 cursor-pointer bg-background">
               <input 
                 type="file" 
                 className="hidden" 
                 onChange={handleFileChange}
-                multiple // Allow multiple file selection
+                multiple
               />
               <Upload className="h-8 w-8 text-primary/50" />
               <div className="text-center">
@@ -153,7 +183,6 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
               </div>
             </label>
             
-            {/* TODO: Add file list here */}
             <div className="text-sm text-muted-foreground">
               Supported files: PDF, DOC, XLS, JPG, PNG
             </div>
