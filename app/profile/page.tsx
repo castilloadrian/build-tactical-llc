@@ -14,6 +14,19 @@ interface UserOrg {
   organization: Organization;
 }
 
+interface Project {
+  id: number;
+  name: string;
+  description: string | null;
+  status: string | null;
+  organization_id: number | null;
+  created_at: string;
+}
+
+interface UserProject {
+  project: Project;
+}
+
 export default async function ProfilePage() {
   const supabase = await createClient();
   
@@ -22,7 +35,7 @@ export default async function ProfilePage() {
 
   if (!user) return null;
 
-  // Get public.users data with organization details through user-org junction table
+  // Get public.users data with organization and project details
   const { data: publicUser, error } = await supabase
     .from('users')
     .select(`
@@ -34,14 +47,25 @@ export default async function ProfilePage() {
           description,
           created_at
         )
+      ),
+      user_projects:"user-project"(
+        project:projects(
+          id,
+          name,
+          description,
+          status,
+          organization_id,
+          created_at
+        )
       )
     `)
     .eq('id', user.id)
     .single();
 
-  // Get the first organization if it exists
-  const primaryOrganization = publicUser?.user_orgs?.[0]?.organization;
+  // Get the organizations and projects
   const organizations = publicUser?.user_orgs?.map((uo: UserOrg) => uo.organization) || [];
+  const projects = publicUser?.user_projects?.map((up: UserProject) => up.project) || [];
+  const userRole = publicUser?.role;
 
   return (
     <div className="container max-w-7xl py-8 px-4">
@@ -93,30 +117,66 @@ export default async function ProfilePage() {
         </table>
       </div>
 
-      {/* Organizations Section */}
+      {/* Conditional Organizations/Projects Section */}
       <div className="mb-8">
-        <h2 className="text-xl font-bold mb-4">My Organizations</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {organizations.map((org: Organization) => (
-            <div key={org.id} className="bg-background p-6 rounded-lg border border-primary/20 hover:bg-primary/5">
-              <div className="flex items-center gap-3 mb-4">
-                <Building2 className="h-5 w-5 text-primary" />
-                <h3 className="text-lg font-semibold">{org.name}</h3>
-              </div>
-              {org.description && (
-                <p className="text-sm text-muted-foreground mb-4">{org.description}</p>
+        {userRole === 'Contractor' ? (
+          // Projects Section for Contractors
+          <>
+            <h2 className="text-xl font-bold mb-4">My Projects</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {projects.map((project: Project) => (
+                <div key={project.id} className="bg-background p-6 rounded-lg border border-primary/20 hover:bg-primary/5">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Building2 className="h-5 w-5 text-primary" />
+                    <h3 className="text-lg font-semibold">{project.name}</h3>
+                  </div>
+                  {project.description && (
+                    <p className="text-sm text-muted-foreground mb-4">{project.description}</p>
+                  )}
+                  <div className="flex flex-col gap-2">
+                    <div className="text-xs text-muted-foreground">
+                      Status: <span className="font-medium">{project.status || 'Not specified'}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Added on {new Date(project.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {projects.length === 0 && (
+                <div className="col-span-full text-center py-8 text-muted-foreground">
+                  You are not assigned to any projects yet.
+                </div>
               )}
-              <div className="text-xs text-muted-foreground">
-                Member since {new Date(org.created_at).toLocaleDateString()}
-              </div>
             </div>
-          ))}
-          {organizations.length === 0 && (
-            <div className="col-span-full text-center py-8 text-muted-foreground">
-              You are not a member of any organizations yet.
+          </>
+        ) : (
+          // Original Organizations Section for non-Contractors
+          <>
+            <h2 className="text-xl font-bold mb-4">My Organizations</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {organizations.map((org: Organization) => (
+                <div key={org.id} className="bg-background p-6 rounded-lg border border-primary/20 hover:bg-primary/5">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Building2 className="h-5 w-5 text-primary" />
+                    <h3 className="text-lg font-semibold">{org.name}</h3>
+                  </div>
+                  {org.description && (
+                    <p className="text-sm text-muted-foreground mb-4">{org.description}</p>
+                  )}
+                  <div className="text-xs text-muted-foreground">
+                    Member since {new Date(org.created_at).toLocaleDateString()}
+                  </div>
+                </div>
+              ))}
+              {organizations.length === 0 && (
+                <div className="col-span-full text-center py-8 text-muted-foreground">
+                  You are not a member of any organizations yet.
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
 
       <div className="space-y-4">

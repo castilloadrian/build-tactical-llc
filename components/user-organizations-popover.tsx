@@ -34,6 +34,7 @@ export function UserOrganizationsPopover({
     new Set(userOrganizations.map(org => org.id))
   );
   const [isUpdating, setIsUpdating] = useState(false);
+  const [open, setOpen] = useState(false);
   const supabase = createClient();
 
   const handleToggleOrg = async (orgId: number) => {
@@ -66,6 +67,7 @@ export function UserOrganizationsPopover({
       if (error) throw error;
       
       onUpdate();
+      setOpen(false);
     } catch (error) {
       console.error('Error updating user organizations:', error);
       alert('Failed to update organization memberships. Please try again.');
@@ -75,15 +77,15 @@ export function UserOrganizationsPopover({
   };
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
           size="sm"
-          className="flex items-center gap-2 text-sm"
+          className="flex items-center gap-2 text-sm w-full md:w-[180px] justify-start hover:bg-primary/10"
         >
-          <Building2 className="h-4 w-4" />
-          <span className="hidden md:inline">Manage Organizations</span>
+          <Building2 className="h-4 w-4 flex-shrink-0" />
+          <span className="hidden md:inline truncate">Manage Organizations</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="start">
