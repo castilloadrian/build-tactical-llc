@@ -26,6 +26,7 @@ import {
 import { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { UserOrganizationsPopover } from '@/components/user-organizations-popover';
+import { UserProjectsPopover } from '@/components/user-projects-popover';
 
 interface ItemToDelete {
   type: 'organization' | 'project';
@@ -42,6 +43,13 @@ interface UserData {
     id: number;
     name: string | null;
     description: string | null;
+    created_at: string;
+  }[];
+  projects?: {
+    id: number;
+    name: string | null;
+    description: string | null;
+    status: string | null;
     created_at: string;
   }[];
 }
@@ -65,6 +73,11 @@ interface Project {
   };
 }
 
+interface UserToChangeRole {
+  id: string;
+  newRole: string;
+}
+
 export default function AdminPage() {
   const router = useRouter();
   const [isOrgModalOpen, setIsOrgModalOpen] = useState(false);
@@ -76,6 +89,8 @@ export default function AdminPage() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [roleChangeConfirmOpen, setRoleChangeConfirmOpen] = useState(false);
+  const [userToChangeRole, setUserToChangeRole] = useState<UserToChangeRole | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -97,6 +112,9 @@ export default function AdminPage() {
           *,
           organizations:"user-org"(
             organization:organizations(*)
+          ),
+          projects:"user-project"(
+            project:projects(*)
           )
         `)
         .eq('id', user.id)
@@ -118,18 +136,28 @@ export default function AdminPage() {
           name: org.organization.name,
           description: org.organization.description,
           created_at: org.organization.created_at
+        })),
+        projects: publicUserData.projects?.map((proj: any) => ({
+          id: proj.project.id,
+          name: proj.project.name,
+          description: proj.project.description,
+          status: proj.project.status,
+          created_at: proj.project.created_at
         }))
       };
       
       setPublicUser(userData);
 
-      // Get all users with their organizations
+      // Get all users with their organizations and projects
       const { data: usersData } = await supabase
         .from('users')
         .select(`
           *,
           organizations:"user-org"(
             organization:organizations(*)
+          ),
+          projects:"user-project"(
+            project:projects(*)
           )
         `)
         .order('full_name');
@@ -145,6 +173,13 @@ export default function AdminPage() {
           name: org.organization.name,
           description: org.organization.description,
           created_at: org.organization.created_at
+        })),
+        projects: user.projects?.map((proj: any) => ({
+          id: proj.project.id,
+          name: proj.project.name,
+          description: proj.project.description,
+          status: proj.project.status,
+          created_at: proj.project.created_at
         }))
       })) || [];
       
@@ -323,8 +358,26 @@ export default function AdminPage() {
     }
   };
 
-  // Add this function to handle role changes
+  // Update the handleRoleChange function
   const handleRoleChange = async (userId: string, newRole: string) => {
+    // Get the current user's role
+    const currentUser = users.find(u => u.id === userId);
+    const isCurrentlyContractor = currentUser?.role === "Contractor";
+    
+    // If changing to Contractor, show confirmation dialog
+    if (newRole === "Contractor") {
+      setUserToChangeRole({ id: userId, newRole });
+      setRoleChangeConfirmOpen(true);
+      return;
+    }
+    
+    // If changing FROM Contractor, show confirmation dialog too
+    if (isCurrentlyContractor) {
+      setUserToChangeRole({ id: userId, newRole });
+      setRoleChangeConfirmOpen(true);
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('users')
@@ -345,14 +398,76 @@ export default function AdminPage() {
     }
   };
 
+  // Update the confirmRoleChange function to handle switching from Contractor
+  const confirmRoleChange = async () => {
+    if (!userToChangeRole) return;
+    
+    try {
+      // First update the user's role
+      const { error: roleError } = await supabase
+        .from('users')
+        .update({ role: userToChangeRole.newRole })
+        .eq('id', userToChangeRole.id);
+        
+      if (roleError) throw roleError;
+      
+      // Get the current user's role before the change
+      const currentUser = users.find(u => u.id === userToChangeRole.id);
+      const isCurrentlyContractor = currentUser?.role === "Contractor";
+      
+      // If changing to Contractor, remove all organization associations
+      if (userToChangeRole.newRole === "Contractor") {
+        const { error: deleteError } = await supabase
+          .from('user-org')
+          .delete()
+          .eq('user_id', userToChangeRole.id);
+          
+        if (deleteError) throw deleteError;
+      }
+      // If changing FROM Contractor to another role, remove all project associations
+      else if (isCurrentlyContractor) {
+        const { error: deleteError } = await supabase
+          .from('user-project')
+          .delete()
+          .eq('user_id', userToChangeRole.id);
+          
+        if (deleteError) throw deleteError;
+      }
+      
+      // Update the users list with the new role
+      setUsers(users.map(user => {
+        if (user.id === userToChangeRole.id) {
+          return { 
+            ...user, 
+            role: userToChangeRole.newRole,
+            // Clear organizations if changing to Contractor
+            organizations: userToChangeRole.newRole === "Contractor" ? [] : user.organizations,
+            // Clear projects if changing from Contractor
+            projects: isCurrentlyContractor ? [] : user.projects
+          };
+        }
+        return user;
+      }));
+    } catch (error: any) {
+      console.error('Error updating user role:', error.message);
+      alert(`Failed to update user role: ${error.message}`);
+    } finally {
+      setRoleChangeConfirmOpen(false);
+      setUserToChangeRole(null);
+    }
+  };
+
   const refreshUserData = async () => {
-    // Get all users with their organizations
+    // Get all users with their organizations and projects
     const { data: usersData } = await supabase
       .from('users')
       .select(`
         *,
         organizations:"user-org"(
           organization:organizations(*)
+        ),
+        projects:"user-project"(
+          project:projects(*)
         )
       `)
       .order('full_name');
@@ -368,6 +483,13 @@ export default function AdminPage() {
         name: org.organization.name,
         description: org.organization.description,
         created_at: org.organization.created_at
+      })),
+      projects: user.projects?.map((proj: any) => ({
+        id: proj.project.id,
+        name: proj.project.name,
+        description: proj.project.description,
+        status: proj.project.status,
+        created_at: proj.project.created_at
       }))
     })) || [];
     
@@ -397,17 +519,29 @@ export default function AdminPage() {
                 <div className="text-sm font-medium text-primary">Email</div>
                 <div className="text-sm break-all">{user.email || 'N/A'}</div>
                 
-                <div className="text-sm font-medium text-primary">Organization</div>
+                <div className="text-sm font-medium text-primary">Organizations/Projects</div>
                 <div className="text-sm break-words flex items-center gap-2">
-                  <span className="text-muted-foreground">
-                    {user.organizations?.length || 0} organization(s)
+                  <span className="text-muted-foreground min-w-[120px]">
+                    {user.role === "Contractor" 
+                      ? `${user.projects?.length || 0} project(s)${"\u00A0".repeat(4)}`
+                      : `${user.organizations?.length || 0} organization(s)`
+                    }
                   </span>
-                  <UserOrganizationsPopover
-                    userId={user.id}
-                    userOrganizations={user.organizations || []}
-                    allOrganizations={organizations}
-                    onUpdate={refreshUserData}
-                  />
+                  {user.role === "Contractor" ? (
+                    <UserProjectsPopover
+                      userId={user.id}
+                      userProjects={user.projects || []}
+                      allProjects={projects}
+                      onUpdate={refreshUserData}
+                    />
+                  ) : (
+                    <UserOrganizationsPopover
+                      userId={user.id}
+                      userOrganizations={user.organizations || []}
+                      allOrganizations={organizations}
+                      onUpdate={refreshUserData}
+                    />
+                  )}
                 </div>
                 
                 <div className="text-sm font-medium text-primary">Role</div>
@@ -423,6 +557,7 @@ export default function AdminPage() {
                     <SelectContent>
                       <SelectItem value="Admin">Admin</SelectItem>
                       <SelectItem value="User">User</SelectItem>
+                      <SelectItem value="Contractor">Contractor</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -438,7 +573,7 @@ export default function AdminPage() {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Name</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Organizations</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Organizations/Projects</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Role</th>
               </tr>
             </thead>
@@ -449,15 +584,27 @@ export default function AdminPage() {
                   <td className="px-6 py-4 whitespace-nowrap">{user.email || 'N/A'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">
-                        {user.organizations?.length || 0} organization(s)
+                      <span className="text-sm text-muted-foreground min-w-[120px]">
+                        {user.role === "Contractor" 
+                          ? `${user.projects?.length || 0} project(s)${"\u00A0".repeat(4)}`
+                          : `${user.organizations?.length || 0} organization(s)`
+                        }
                       </span>
-                      <UserOrganizationsPopover
-                        userId={user.id}
-                        userOrganizations={user.organizations || []}
-                        allOrganizations={organizations}
-                        onUpdate={refreshUserData}
-                      />
+                      {user.role === "Contractor" ? (
+                        <UserProjectsPopover
+                          userId={user.id}
+                          userProjects={user.projects || []}
+                          allProjects={projects}
+                          onUpdate={refreshUserData}
+                        />
+                      ) : (
+                        <UserOrganizationsPopover
+                          userId={user.id}
+                          userOrganizations={user.organizations || []}
+                          allOrganizations={organizations}
+                          onUpdate={refreshUserData}
+                        />
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -472,6 +619,7 @@ export default function AdminPage() {
                       <SelectContent>
                         <SelectItem value="Admin">Admin</SelectItem>
                         <SelectItem value="User">User</SelectItem>
+                        <SelectItem value="Contractor">Contractor</SelectItem>
                       </SelectContent>
                     </Select>
                   </td>
@@ -687,6 +835,36 @@ export default function AdminPage() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Role Change Confirmation Dialog */}
+      <AlertDialog open={roleChangeConfirmOpen} onOpenChange={setRoleChangeConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change User Role?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {userToChangeRole?.newRole === "Contractor" ? (
+                <>
+                  Changing this user to a Contractor will remove all their organization associations.
+                  Contractors can only be associated with specific projects.
+                </>
+              ) : (
+                <>
+                  Changing this user from a Contractor will remove all their project assignments.
+                  Regular users are associated with organizations instead of specific projects.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmRoleChange}
+            >
+              Confirm Change
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
