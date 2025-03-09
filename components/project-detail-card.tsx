@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TaskList } from "@/components/task-list";
 import { User } from '@supabase/supabase-js';
 import { createClient } from "@/utils/supabase/client";
@@ -47,8 +47,8 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
   const [expenses, setExpenses] = useState<ExpenseRow[]>([
     { id: 1, description: '', amount: '', date: '' }
   ]);
-  const supabase = createClient();
 
+  const supabase = createClient();
 
   // Calculate progress based on completed tasks
   const progress = tasks.length > 0 
@@ -71,16 +71,19 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
   };
 
   const handleSave = async () => {
-
-
-    // for (const task of tasks) {
-    //   const { data: taskData, error: taskError } = await supabase.from('tasks').update({
-    //     project_id: project.id,
-    //     title: task.title,
-    //     description: task.description,
-    //     completed: task.completed
-    //   }).eq('id', task.id);
-    // }
+    for (const task of tasks) {
+      const { data: taskData, error: taskError } = await supabase.from('tasks').update({
+        project_id: project.id,
+        title: task.title,
+        description: task.description,
+        completed: task.completed
+      }).eq('id', task.id);
+      if (taskError) {
+        console.error('Error updating task:', taskError);
+      } else {
+        console.log('Task updated:', taskData);
+      }
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,6 +93,24 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
       console.log('Selected files:', files);
     }
   };
+
+
+
+  const loadTasks = async () => {
+    const { data: tasks, error } = await supabase.from('tasks').select('*').eq('project_id', project.id);
+    if (error) {
+      console.error('Error loading tasks:', error);
+    } else {
+      setTasks(tasks);
+    }
+  };
+
+
+
+
+  useEffect(() => {
+    loadTasks();
+  }, []);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -142,7 +163,7 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
           </div>
 
           {/* Tasks Section */}
-          <TaskList tasks={tasks} onTasksChange={setTasks} />
+          <TaskList tasks={tasks} onTasksChange={setTasks}  />
 
           {/* Detailed Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
