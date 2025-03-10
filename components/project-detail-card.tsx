@@ -387,21 +387,21 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
     }
   };
 
-  useEffect(() => {
-    loadTasks();
-  }, []);
-
-
-
   const loadTasks = async () => {
     const { data: tasks, error } = await supabase.from('tasks').select('*').eq('project_id', project.id);
     if (error) {
       console.error('Error loading tasks:', error);
     } else {
-      setCurrTasks(tasks);
+      // Make sure to map the database field 'is_complete' to the UI field 'completed'
+      const formattedTasks = tasks.map(task => ({
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        completed: task.is_complete // This mapping is crucial
+      }));
+      setCurrTasks(formattedTasks);
     }
   };
-
 
   useEffect(() => {
     loadTasks();

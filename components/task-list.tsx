@@ -2,7 +2,7 @@ import { Plus, Trash2, Pencil, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Task } from "@/components/task";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 
 interface TaskItem {
@@ -88,15 +88,27 @@ export function TaskList({ tasks, onTasksChange, projectId }: TaskListProps) {
 
   const toggleComplete = async (task: TaskItem) => {
     try {
-      const { error: taskError } = await supabase
+      console.log('Toggling task completion for task ID:', task.id);
+      console.log('Current completion status:', task.completed);
+      console.log('New completion status:', !task.completed);
+      
+      // Update in the database
+      const { data, error: taskError } = await supabase
         .from('tasks')
         .update({
-          is_complete: !task.completed
+          is_complete: !task.completed // Make sure this field name matches your database schema
         })
-        .eq('id', task.id);
+        .eq('id', task.id)
+        .select();
 
-      if (taskError) throw taskError;
+      if (taskError) {
+        console.error('Error updating task completion:', taskError);
+        throw taskError;
+      }
+      
+      console.log('Database update response:', data);
 
+      // Update in the local state
       const updatedTasks = tasks.map(t =>
         t.id === task.id ? { ...t, completed: !t.completed } : t
       );
@@ -120,6 +132,33 @@ export function TaskList({ tasks, onTasksChange, projectId }: TaskListProps) {
       console.error('Error deleting task:', error);
     }
   };
+
+  // Function to load tasks from the database
+  const loadTasks = async () => {
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('project_id', projectId);
+      
+    if (error) {
+      console.error('Error loading tasks:', error);
+    } else if (data) {
+      // Transform database tasks to match our UI structure
+      const formattedTasks = data.map(task => ({
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        completed: task.is_complete // Make sure this matches the database field name
+      }));
+      
+      onTasksChange(formattedTasks);
+    }
+  };
+
+  // Make sure to call loadTasks when the component mounts
+  useEffect(() => {
+    loadTasks();
+  }, [projectId]);
 
   return (
     <div className="space-y-6">
