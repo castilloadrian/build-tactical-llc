@@ -41,9 +41,8 @@ interface ProjectDetailCardProps {
 }
 
 export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCardProps) {
-  const [tasks, setTasks] = useState<Task[]>([
-    { id: 0, title: '', description: '', completed: false }
-  ]);
+  const [curr_tasks, setCurrTasks] = useState<Task[]>([]);
+  const [init_tasks, setInitTasks] = useState<Task[]>([]);
   const [expenses, setExpenses] = useState<ExpenseRow[]>([
     { id: 1, description: '', amount: '', date: '' }
   ]);
@@ -51,8 +50,8 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
   const supabase = createClient();
 
   // Calculate progress based on completed tasks
-  const progress = tasks.length > 0 
-    ? Math.round((tasks.filter(task => task.completed).length / tasks.length) * 100) 
+  const progress = curr_tasks.length > 0 
+    ? Math.round((curr_tasks.filter(task => task.completed).length / curr_tasks.length) * 100) 
     : 0;
 
   const addExpenseRow = () => {
@@ -70,20 +69,8 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
     setExpenses(expenses.filter(expense => expense.id !== id));
   };
 
-  const handleSave = async () => {
-    for (const task of tasks) {
-      const { data: taskData, error: taskError } = await supabase.from('tasks').update({
-        project_id: project.id,
-        title: task.title,
-        description: task.description,
-        completed: task.completed
-      }).eq('id', task.id);
-      if (taskError) {
-        console.error('Error updating task:', taskError);
-      } else {
-        console.log('Task updated:', taskData);
-      }
-    }
+  const handleClose = () => {
+    onClose();
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -101,11 +88,10 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
     if (error) {
       console.error('Error loading tasks:', error);
     } else {
-      setTasks(tasks);
+      setCurrTasks(tasks);
+      setInitTasks(tasks);
     }
   };
-
-
 
 
   useEffect(() => {
@@ -113,7 +99,7 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
   }, []);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-6xl h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-3xl font-bold text-primary">{project.name}</DialogTitle>
@@ -163,7 +149,11 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
           </div>
 
           {/* Tasks Section */}
-          <TaskList tasks={tasks} onTasksChange={setTasks}  />
+          <TaskList 
+            tasks={curr_tasks} 
+            onTasksChange={setCurrTasks}
+            projectId={project.id}
+          />
 
           {/* Detailed Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -260,13 +250,13 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
           </div>
         </div>
 
-        {/* Footer with Save Button */}
+        {/* Footer - remove save button since we're saving immediately */}
         <div className="flex justify-end pt-6 mt-6 border-t border-primary/20">
           <Button 
-            onClick={handleSave}
+            onClick={handleClose}
             className="bg-primary hover:bg-primary/90 h-11 px-6 text-base"
           >
-            Save Changes
+            Close
           </Button>
         </div>
       </DialogContent>
