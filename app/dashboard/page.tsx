@@ -100,7 +100,7 @@ export default function DashboardPage() {
       name: project.name,
       progress: 0, // You can add these fields to your project data if needed
       tasks: '0/0',
-      budget: '$0',
+      budget: 0,
       time: '0h',
       // Add any other required fields
     } : null;
