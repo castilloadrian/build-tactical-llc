@@ -109,8 +109,8 @@ export default function DashboardPage() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="max-w-md mx-auto space-y-4">
-        {/* Organization Selector Card - Adjusted spacing */}
-        <Card>
+        {/* Organization Selector Card - Fixed width */}
+        <Card className="w-full">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -128,11 +128,11 @@ export default function DashboardPage() {
               }}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select organization" />
+                <SelectValue placeholder="Select organization" className="truncate" />
               </SelectTrigger>
               <SelectContent>
                 {orgsList.map((org) => (
-                  <SelectItem key={org.id} value={org.id.toString()}>
+                  <SelectItem key={org.id} value={org.id.toString()} className="truncate">
                     {org.name}
                   </SelectItem>
                 ))}
@@ -141,9 +141,9 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Project Selector Card - Matching the new style */}
+        {/* Project Selector Card - Fixed width */}
         {selectedOrg && (
-          <Card>
+          <Card className="w-full">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -158,11 +158,11 @@ export default function DashboardPage() {
                 onValueChange={setSelectedProject}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select project" />
+                  <SelectValue placeholder="Select project" className="truncate" />
                 </SelectTrigger>
                 <SelectContent>
                   {projectsList.map((project) => (
-                    <SelectItem key={project.id} value={project.id.toString()}>
+                    <SelectItem key={project.id} value={project.id.toString()} className="truncate">
                       {project.name}
                     </SelectItem>
                   ))}

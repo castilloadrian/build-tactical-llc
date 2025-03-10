@@ -48,6 +48,7 @@ interface ProjectDetailCardProps {
     tasks: string;
     budget: number;
     time: string;
+    status?: string;
   };
   isOpen: boolean;
   onClose: () => void;
@@ -65,6 +66,7 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
   const [isLoadingExpenses, setIsLoadingExpenses] = useState(false);
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   const [newBudget, setNewBudget] = useState<string>(project.budget.toString());
+  const [projectStatus, setProjectStatus] = useState<string | undefined>(project.status);
   const supabase = createClient();
 
   // Fetch files when the component mounts or when project changes
@@ -140,24 +142,29 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
     }
   };
 
-  // Function to fetch budget data from Supabase
+  // Function to fetch project data from Supabase
   const fetchProjectBudget = async () => {
     setIsLoadingBudget(true);
     try {
-      // Fetch the project budget from the projects table
+      // Fetch the project budget and status from the projects table
       const { data: projectData, error: projectError } = await supabase
         .from('projects')
-        .select('budget')
+        .select('budget, status')  // Add status to the select query
         .eq('id', project.id)
         .single();
         
       if (projectError) {
-        console.error('Error fetching project budget:', projectError);
-        toast.error('Failed to load project budget');
+        console.error('Error fetching project data:', projectError);
+        toast.error('Failed to load project data');
         return;
       } else if (projectData) {
         setProjectBudget(projectData.budget);
         setNewBudget(projectData.budget.toString());
+        
+        // Update the project status state
+        if (projectData.status) {
+          setProjectStatus(projectData.status);
+        }
       }
       
       // Fetch expenses from the expenses table
@@ -451,7 +458,21 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-6xl h-[80vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle className="text-2xl">{project.name}</DialogTitle>
+            <div className="flex items-center gap-3">
+              <DialogTitle className="text-2xl">{project.name}</DialogTitle>
+              <span 
+                data-project-status
+                className={`px-2 py-1 text-xs font-medium rounded-full ${
+                  projectStatus === 'Completed' ? 'bg-green-100 text-green-800' :
+                  projectStatus === 'Active' ? 'bg-blue-100 text-blue-800' :
+                  projectStatus === 'On Hold' ? 'bg-amber-100 text-amber-800' :
+                  projectStatus === 'Cancelled' ? 'bg-red-100 text-red-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}
+              >
+                {projectStatus || 'No Status'}
+              </span>
+            </div>
           </DialogHeader>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto pb-6">
