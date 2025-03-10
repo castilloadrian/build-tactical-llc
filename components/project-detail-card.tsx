@@ -212,7 +212,7 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
           dbId: expense.id,
           description: expense.description || '',
           amount: expense.cost ? expense.cost.toString() : '',
-          date: expense.date || '',
+          date: expense.created_at || '',
           isEditing: false
         }));
         
@@ -273,6 +273,7 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
         project_id: project.id,
         description: expense.description,
         cost: parseFloat(expense.amount),
+        created_at: expense.date
       };
 
       let result;
