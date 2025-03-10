@@ -63,6 +63,8 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
   const [budgetUsage, setBudgetUsage] = useState<number>(0);
   const [isLoadingBudget, setIsLoadingBudget] = useState(false);
   const [isLoadingExpenses, setIsLoadingExpenses] = useState(false);
+  const [isEditingBudget, setIsEditingBudget] = useState(false);
+  const [newBudget, setNewBudget] = useState<string>(project.budget.toString());
   const supabase = createClient();
 
   // Fetch files when the component mounts or when project changes
@@ -155,6 +157,7 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
         return;
       } else if (projectData) {
         setProjectBudget(projectData.budget);
+        setNewBudget(projectData.budget.toString());
       }
       
       // Fetch expenses from the expenses table
@@ -180,6 +183,9 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
       if (projectData.budget > 0) {
         const usagePercentage = Math.round((totalExpenses / projectData.budget) * 100);
         setBudgetUsage(usagePercentage);
+      } else if (totalExpenses > 0) {
+        // If budget is 0 but there are expenses, set to over budget (100%+)
+        setBudgetUsage(101); // Just over 100% to trigger the "over budget" display
       } else {
         setBudgetUsage(0);
       }
@@ -407,6 +413,39 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
     loadTasks();
   }, []);
 
+  // Function to update the project budget in the database
+  const updateProjectBudget = async () => {
+    try {
+      // Validate the budget input
+      const budgetValue = parseFloat(newBudget);
+      if (isNaN(budgetValue) || budgetValue < 0) {
+        toast.error('Please enter a valid budget amount');
+        return;
+      }
+
+      // Update the budget in the database
+      const { error } = await supabase
+        .from('projects')
+        .update({ budget: budgetValue })
+        .eq('id', project.id);
+        
+      if (error) {
+        console.error('Error updating budget:', error);
+        toast.error('Failed to update budget');
+      } else {
+        setProjectBudget(budgetValue);
+        setIsEditingBudget(false);
+        toast.success('Budget updated successfully');
+        
+        // Refresh budget data to update the usage percentage
+        fetchProjectBudget();
+      }
+    } catch (err) {
+      console.error('Error in updateProjectBudget:', err);
+      toast.error('An error occurred while updating the budget');
+    }
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -553,16 +592,47 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
               </div>
 
               {/* Detailed Metrics */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-6">
                 <Card className="border-primary/20">
                   <CardHeader>
-                    <CardTitle className="text-base text-primary">Budget</CardTitle>
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-base text-primary">Budget</CardTitle>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setIsEditingBudget(!isEditingBudget)}
+                        className="h-8 px-2"
+                      >
+                        {isEditingBudget ? 'Cancel' : 'Edit'}
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     {isLoadingBudget ? (
                       <div className="flex items-center space-x-2">
                         <RefreshCw className="h-4 w-4 animate-spin" />
                         <span>Loading...</span>
+                      </div>
+                    ) : isEditingBudget ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xl font-bold">$</span>
+                          <Input
+                            type="number"
+                            value={newBudget}
+                            onChange={(e) => setNewBudget(e.target.value)}
+                            className="border-primary/20"
+                            placeholder="Enter budget amount"
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+                        <Button
+                          onClick={updateProjectBudget}
+                          className="w-full bg-primary hover:bg-primary/90"
+                        >
+                          Save Budget
+                        </Button>
                       </div>
                     ) : (
                       <>
@@ -575,20 +645,11 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
                         </div>
                         <p className="text-base text-muted-foreground mt-1">
                           {budgetUsage > 100 
-                            ? `Over budget by ${budgetUsage - 100}%` 
+                            ? `Over budget by ${projectBudget === 0 ? '∞' : `${budgetUsage - 100}%`}` 
                             : `${budgetUsage}% used`}
                         </p>
                       </>
                     )}
-                  </CardContent>
-                </Card>
-                <Card className="border-primary/20">
-                  <CardHeader>
-                    <CardTitle className="text-base text-primary">Time Tracked</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-primary">{project.time}</div>
-                    <p className="text-base text-muted-foreground">Last 7 days: 32h</p>
                   </CardContent>
                 </Card>
               </div>
