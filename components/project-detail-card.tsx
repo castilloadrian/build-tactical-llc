@@ -23,6 +23,7 @@ import { TaskList } from "@/components/task-list";
 import { User } from '@supabase/supabase-js';
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
+import { ExpensesChart } from "@/components/expenses-chart";
 
 
 interface Task {
@@ -673,6 +674,14 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
                     )}
                   </CardContent>
                 </Card>
+                
+                {/* Updated ExpensesChart with budget data passed */}
+                <ExpensesChart 
+                  projectId={project.id} 
+                  expenses={expenses} 
+                  isLoading={isLoadingExpenses} 
+                  budget={projectBudget}
+                />
               </div>
 
               {/* Expenses Section */}
