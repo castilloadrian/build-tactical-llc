@@ -352,22 +352,25 @@ export function TaskList({ tasks, onTasksChange, projectId }: TaskListProps) {
                       />
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => saveTask(task.id)}
-                    className="text-green-600 hover:text-green-700 h-11 w-11 mt-2"
-                  >
-                    <Save className="h-5 w-5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={cancelEditing}
-                    className="text-muted-foreground hover:text-destructive h-11 w-11 mt-2"
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => saveTask(task.id)}
+                      className="text-green-600 hover:text-green-700 h-11 w-11 mt-2"
+                    >
+                      <Save className="h-5 w-5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={cancelEditing}
+                      className="text-muted-foreground hover:text-destructive h-11 w-11"
+                    >
+                      <X className="h-5 w-5" />
+                    </Button>
+                  </div>
+                  <div></div>
                 </>
               ) : (
                 <>

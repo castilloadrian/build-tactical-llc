@@ -832,7 +832,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           </DialogHeader>
           <ExpensesChart 
             projectId={parseInt(projectId)} 
-            expenses={expenses} 
+            expenses={expenses.filter(exp => exp.dbId !== undefined)} 
             isLoading={isLoadingExpenses} 
             budget={projectBudget}
           />
