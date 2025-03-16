@@ -3,7 +3,7 @@ import { createClient } from "@/utils/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
-import { Building2, Briefcase, LayoutDashboard } from "lucide-react";
+import { Building2, Briefcase, LayoutDashboard, PieChart } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProjectDetailCard } from '@/components/project-detail-card';
 import { Button } from "@/components/ui/button";
@@ -106,10 +106,35 @@ export default function DashboardPage() {
     } : null;
   };
 
+  // Calculate status counts
+  const getStatusCounts = () => {
+    type StatusKey = 'Active' | 'On Hold' | 'Completed' | 'Cancelled' | 'Other';
+    
+    const counts: Record<StatusKey, number> = {
+      'Active': 0,
+      'On Hold': 0,
+      'Completed': 0,
+      'Cancelled': 0,
+      'Other': 0
+    };
+    
+    projectsList.forEach(project => {
+      const rawStatus = project.status || 'Active';
+      // Check if the status is one of our known keys
+      const status = (Object.keys(counts) as StatusKey[]).includes(rawStatus as StatusKey) 
+        ? rawStatus as StatusKey 
+        : 'Other';
+        
+      counts[status]++;
+    });
+    
+    return counts;
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="max-w-md mx-auto space-y-4">
-        {/* Organization Selector Card - Fixed width */}
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Organization Selector Card */}
         <Card className="w-full">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -141,46 +166,93 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Project Selector Card - Fixed width */}
-        {selectedOrg && (
-          <Card className="w-full">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Briefcase className="h-5 w-5 text-muted-foreground" />
-                  <CardTitle className="text-base font-medium">Project</CardTitle>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Select
-                value={selectedProject?.toString()}
-                onValueChange={setSelectedProject}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select project" className="truncate" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projectsList.map((project) => (
-                    <SelectItem key={project.id} value={project.id.toString()} className="truncate">
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Dashboard Button */}
-        {selectedProject && (
-          <Button
-            className="w-full flex items-center justify-center gap-2 mt-6"
-            onClick={() => setIsProjectCardOpen(true)}
-          >
-            <LayoutDashboard className="h-5 w-5" />
-            Open Project Dashboard
-          </Button>
+        {/* Projects and Status Summary */}
+        {selectedOrg && projectsList.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {/* Projects List - Takes 3/4 of the space on medium screens and up */}
+            <div className="md:col-span-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Projects</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {projectsList.map((project) => (
+                      <Card 
+                        key={project.id} 
+                        className={`p-4 hover:bg-muted/50 transition-colors cursor-pointer ${
+                          selectedProject === project.id.toString() ? 'border-2 border-primary' : ''
+                        }`}
+                        onClick={() => {
+                          setSelectedProject(project.id.toString());
+                          setIsProjectCardOpen(true);
+                        }}
+                      >
+                        <div className="flex justify-between items-center gap-4">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium truncate">{project.name}</h3>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {project.organization?.name}
+                            </p>
+                          </div>
+                          <div className="flex-shrink-0">
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap ${
+                              project.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                              project.status === 'Active' ? 'bg-blue-100 text-blue-800' :
+                              project.status === 'On Hold' ? 'bg-yellow-100 text-yellow-800' :
+                              project.status === 'Cancelled' ? 'bg-red-100 text-red-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {project.status || 'Active'}
+                            </span>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            
+            {/* Status Summary - Takes 1/4 of the space on medium screens and up */}
+            <div className="md:col-span-1">
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <PieChart className="h-5 w-5 text-muted-foreground" />
+                    <CardTitle className="text-base font-medium">Status Summary</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {Object.entries(getStatusCounts()).map(([status, count]) => 
+                      count > 0 ? (
+                        <div key={status} className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-3 h-3 rounded-full ${
+                              status === 'Completed' ? 'bg-green-500' :
+                              status === 'Active' ? 'bg-blue-500' :
+                              status === 'On Hold' ? 'bg-yellow-500' :
+                              status === 'Cancelled' ? 'bg-red-500' :
+                              'bg-purple-500'
+                            }`}></span>
+                            <span className="text-sm">{status}</span>
+                          </div>
+                          <span className="font-medium">{count}</span>
+                        </div>
+                      ) : null
+                    )}
+                    <div className="pt-2 border-t mt-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Total</span>
+                        <span className="font-medium">{projectsList.length}</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         )}
       </div>
 
