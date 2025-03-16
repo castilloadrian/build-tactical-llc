@@ -7,11 +7,12 @@ interface TaskProps {
   title: string;
   description: string;
   completed: boolean;
+  created_at?: string;
   onTaskChange: (id: number, field: 'title' | 'description' | 'completed', value: any) => void;
   onDelete: (id: number) => void;
 }
 
-export function Task({ id, title, description, completed, onTaskChange, onDelete }: TaskProps) {
+export function Task({ id, title, description, completed, created_at, onTaskChange, onDelete }: TaskProps) {
   return (
     <div className="grid grid-cols-[auto_1fr_auto] gap-4 items-start bg-muted/10 p-4 rounded-lg">
       <input
