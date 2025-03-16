@@ -108,7 +108,9 @@ export default function DashboardPage() {
 
   // Calculate status counts
   const getStatusCounts = () => {
-    const counts = {
+    type StatusKey = 'Active' | 'On Hold' | 'Completed' | 'Cancelled' | 'Other';
+    
+    const counts: Record<StatusKey, number> = {
       'Active': 0,
       'On Hold': 0,
       'Completed': 0,
@@ -117,12 +119,13 @@ export default function DashboardPage() {
     };
     
     projectsList.forEach(project => {
-      const status = project.status || 'Active';
-      if (counts[status] !== undefined) {
-        counts[status]++;
-      } else {
-        counts['Other']++;
-      }
+      const rawStatus = project.status || 'Active';
+      // Check if the status is one of our known keys
+      const status = (Object.keys(counts) as StatusKey[]).includes(rawStatus as StatusKey) 
+        ? rawStatus as StatusKey 
+        : 'Other';
+        
+      counts[status]++;
     });
     
     return counts;
