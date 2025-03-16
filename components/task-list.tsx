@@ -1,4 +1,4 @@
-import { Plus, Trash2, Pencil, Save, X, AlertCircle } from "lucide-react";
+import { Plus, Trash2, Pencil, Save, X, AlertCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Task } from "@/components/task";
@@ -238,6 +238,27 @@ export function TaskList({ tasks, onTasksChange, projectId }: TaskListProps) {
     loadTasks();
   }, [projectId]);
 
+  // Inside the TaskList component, add a function to check if a task is approaching its deadline
+  const isApproachingDeadline = (dueDate: string) => {
+    if (!dueDate) return false;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to start of day
+    
+    const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0); // Reset time to start of day
+    
+    // Don't show warning if task is already overdue
+    if (due < today) return false;
+    
+    // Calculate days until due
+    const diffTime = due.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Return true if due within 3 days (including today)
+    return diffDays <= 3;
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
@@ -293,11 +314,14 @@ export function TaskList({ tasks, onTasksChange, projectId }: TaskListProps) {
         {tasks.length > 0 ? (
           tasks.map((task) => {
             const isOverdue = task.due_at && new Date(task.due_at) < new Date() && !task.completed;
+            const isWarning = !isOverdue && !task.completed && task.due_at && isApproachingDeadline(task.due_at);
+            
             return (
             <div 
               key={task.id} 
               className={`grid grid-cols-[auto_1fr_auto_auto] gap-4 items-start bg-muted/10 p-4 rounded-lg
                 ${isOverdue ? 'border-2 border-red-500 bg-red-50/10 overdue-task' : ''}
+                ${isWarning ? 'border-2 border-amber-500 bg-amber-50/10' : ''}
               `}
             >
               <input
@@ -360,8 +384,13 @@ export function TaskList({ tasks, onTasksChange, projectId }: TaskListProps) {
                         </div>
                       )}
                       {task.due_at && (
-                        <div className={`text-xs flex items-center gap-1 ${isOverdue ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
+                        <div className={`text-xs flex items-center gap-1 ${
+                          isOverdue ? 'text-red-500 font-medium' : 
+                          isWarning ? 'text-amber-500 font-medium' : 
+                          'text-muted-foreground'
+                        }`}>
                           {isOverdue && <AlertCircle className="h-3 w-3" />}
+                          {isWarning && <Clock className="h-3 w-3" />}
                           Due: {formatDate(task.due_at)}
                         </div>
                       )}
