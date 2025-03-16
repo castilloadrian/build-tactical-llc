@@ -5,10 +5,10 @@ import { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { Building2, Briefcase, LayoutDashboard, PieChart } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ProjectDetailCard } from '@/components/project-detail-card';
-import { Button } from "@/components/ui/button";
+import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
@@ -149,7 +149,6 @@ export default function DashboardPage() {
               value={selectedOrg?.toString()}
               onValueChange={(value) => {
                 setSelectedOrg(value);
-                setSelectedProject(null);
               }}
             >
               <SelectTrigger className="w-full">
@@ -180,13 +179,8 @@ export default function DashboardPage() {
                     {projectsList.map((project) => (
                       <Card 
                         key={project.id} 
-                        className={`p-4 hover:bg-muted/50 transition-colors cursor-pointer ${
-                          selectedProject === project.id.toString() ? 'border-2 border-primary' : ''
-                        }`}
-                        onClick={() => {
-                          setSelectedProject(project.id.toString());
-                          setIsProjectCardOpen(true);
-                        }}
+                        className="p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+                        onClick={() => router.push(`/projects/${project.id}`)}
                       >
                         <div className="flex justify-between items-center gap-4">
                           <div className="flex-1 min-w-0">
@@ -255,15 +249,6 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
-
-      {/* Project Detail Card Dialog */}
-      {selectedProject && getCurrentProject() && (
-        <ProjectDetailCard
-          project={getCurrentProject()!}
-          isOpen={isProjectCardOpen}
-          onClose={() => setIsProjectCardOpen(false)}
-        />
-      )}
 
       {/* No Projects Message */}
       {selectedOrg && projectsList.length === 0 && (

@@ -164,15 +164,14 @@ export function TaskList({ tasks, onTasksChange, projectId }: TaskListProps) {
 
   const toggleComplete = async (task: TaskItem) => {
     try {
-      console.log('Toggling task completion for task ID:', task.id);
-      console.log('Current completion status:', task.completed);
-      console.log('New completion status:', !task.completed);
+      // Ensure we have a boolean value for completed
+      const currentCompleted = Boolean(task.completed);
       
       // Update in the database
       const { data, error: taskError } = await supabase
         .from('tasks')
         .update({
-          is_complete: !task.completed // Make sure this field name matches your database schema
+          is_complete: !currentCompleted
         })
         .eq('id', task.id)
         .select();
@@ -181,12 +180,10 @@ export function TaskList({ tasks, onTasksChange, projectId }: TaskListProps) {
         console.error('Error updating task completion:', taskError);
         throw taskError;
       }
-      
-      console.log('Database update response:', data);
 
-      // Update in the local state
+      // Update in the local state, ensuring completed is always a boolean
       const updatedTasks = tasks.map(t =>
-        t.id === task.id ? { ...t, completed: !t.completed } : t
+        t.id === task.id ? { ...t, completed: !currentCompleted } : t
       );
       onTasksChange(updatedTasks);
     } catch (error) {
@@ -222,11 +219,11 @@ export function TaskList({ tasks, onTasksChange, projectId }: TaskListProps) {
       // Transform database tasks to match our UI structure
       const formattedTasks = data.map(task => ({
         id: task.id,
-        title: task.title,
-        description: task.description,
-        completed: task.is_complete, // Make sure this matches the database field name
-        created_at: task.created_at, // Include the created_at timestamp
-        due_at: task.due_at
+        title: task.title || '',
+        description: task.description || '',
+        completed: Boolean(task.is_complete), // Ensure it's always a boolean
+        created_at: task.created_at || null,
+        due_at: task.due_at || null
       }));
       
       onTasksChange(formattedTasks);
