@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, Upload, Download, RefreshCw, File, Trash } from "lucide-react";
+import { Plus, Trash2, Upload, Download, RefreshCw, File, Trash, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
@@ -69,6 +69,7 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
   const [newBudget, setNewBudget] = useState<string>(project.budget.toString());
   const [projectStatus, setProjectStatus] = useState<string | undefined>(project.status);
   const supabase = createClient();
+  const [isExpensesChartOpen, setIsExpensesChartOpen] = useState(false);
 
   // Fetch files when the component mounts or when project changes
   useEffect(() => {
@@ -619,14 +620,25 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
                   <CardHeader>
                     <div className="flex justify-between items-center">
                       <CardTitle className="text-base text-primary">Budget</CardTitle>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => setIsEditingBudget(!isEditingBudget)}
-                        className="h-8 px-2"
-                      >
-                        {isEditingBudget ? 'Cancel' : 'Edit'}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setIsExpensesChartOpen(true)}
+                          className="h-8 px-2"
+                        >
+                          <BarChart3 className="h-4 w-4 mr-2" />
+                          View Chart
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => setIsEditingBudget(!isEditingBudget)}
+                          className="h-8 px-2"
+                        >
+                          {isEditingBudget ? 'Cancel' : 'Edit'}
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -674,14 +686,6 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
                     )}
                   </CardContent>
                 </Card>
-                
-                {/* Updated ExpensesChart with budget data passed */}
-                <ExpensesChart 
-                  projectId={project.id} 
-                  expenses={expenses} 
-                  isLoading={isLoadingExpenses} 
-                  budget={projectBudget}
-                />
               </div>
 
               {/* Expenses Section */}
@@ -831,6 +835,29 @@ export function ProjectDetailCard({ project, isOpen, onClose }: ProjectDetailCar
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add a Dialog for the expenses chart */}
+      <Dialog open={isExpensesChartOpen} onOpenChange={setIsExpensesChartOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Expense Analysis</DialogTitle>
+          </DialogHeader>
+          <ExpensesChart 
+            projectId={project.id} 
+            expenses={expenses} 
+            isLoading={isLoadingExpenses} 
+            budget={projectBudget}
+          />
+          <div className="flex justify-end mt-4">
+            <Button 
+              onClick={() => setIsExpensesChartOpen(false)}
+              variant="outline"
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
