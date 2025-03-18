@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Trash2, Upload, Download, RefreshCw, File, Trash, BarChart3, ArrowLeft } from "lucide-react";
@@ -53,6 +53,12 @@ interface ExpenseRow {
   dbId?: number;
 }
 
+interface ProjectFile {
+  name: string;
+  url: string;
+  tags: string[];
+}
+
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const projectId = resolvedParams.id;
@@ -60,7 +66,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   
   const [curr_tasks, setCurrTasks] = useState<Task[]>([]);
   const [expenses, setExpenses] = useState<ExpenseRow[]>([]);
-  const [projectFiles, setProjectFiles] = useState<Array<{name: string, url: string}>>([]);
+  const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<string | null>(null);
   const [projectBudget, setProjectBudget] = useState<number>(0);
@@ -72,7 +78,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [projectStatus, setProjectStatus] = useState<string>('');
   const [projectName, setProjectName] = useState<string>('');
   const [isExpensesChartOpen, setIsExpensesChartOpen] = useState(false);
+  const [newFileTags, setNewFileTags] = useState<string>('');
+  const [fileTagFilter, setFileTagFilter] = useState<string>('');
+  const [isTagEditDialogOpen, setIsTagEditDialogOpen] = useState(false);
+  const [fileToEditTags, setFileToEditTags] = useState<ProjectFile | null>(null);
+  const [editingTags, setEditingTags] = useState<string>('');
   const supabase = createClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchProjectDetails = async () => {
@@ -137,6 +149,24 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         console.error('Error fetching files:', error);
         toast.error('Failed to load project files');
       } else if (data) {
+        // Get file metadata from the database
+        const { data: fileMetadata, error: metadataError } = await supabase
+          .from('file_data')
+          .select('*')
+          .eq('project_id', projectId);
+        console.log(fileMetadata);
+        if (metadataError) {
+          console.error('Error fetching file metadata:', metadataError);
+        }
+        
+        // Create a map of filename to tags
+        const fileTagsMap = new Map();
+        if (fileMetadata) {
+          fileMetadata.forEach(file => {
+            fileTagsMap.set(file.file_name, file.tags || []);
+          });
+        }
+        
         // Create URLs for each file
         const filesWithUrls = await Promise.all(
           data.map(async (file) => {
@@ -146,7 +176,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               
             return {
               name: file.name,
-              url: urlData?.signedUrl || ''
+              url: urlData?.signedUrl || '',
+              tags: fileTagsMap.get(file.name) || []
             };
           })
         );
@@ -235,18 +266,33 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     try {
       const bucketName = `project-${projectId}`;
       
-      const { error } = await supabase.storage
+      // First delete the file from storage
+      const { error: storageError } = await supabase.storage
         .from(bucketName)
         .remove([fileName]);
         
-      if (error) {
-        console.error('Error deleting file:', error);
-        toast.error(`Failed to delete ${fileName}: ${error.message}`);
+      if (storageError) {
+        console.error('Error deleting file from storage:', storageError);
+        toast.error(`Failed to delete ${fileName}: ${storageError.message}`);
+        return;
+      }
+      
+      // Then delete the file metadata from the database
+      const { error: dbError } = await supabase
+        .from('file_data')
+        .delete()
+        .eq('project_id', projectId)
+        .eq('file_name', fileName);
+        
+      if (dbError) {
+        console.error('Error deleting file metadata:', dbError);
+        toast.error(`File deleted but failed to remove metadata: ${dbError.message}`);
       } else {
         toast.success(`${fileName} has been deleted successfully.`);
-        // Refresh the file list after successful deletion
-        fetchProjectFiles();
       }
+      
+      // Refresh the file list after successful deletion
+      fetchProjectFiles();
     } catch (err) {
       console.error('Error in deleteFile:', err);
       toast.error('An error occurred while deleting the file');
@@ -341,6 +387,117 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     } catch (error: any) {
       console.error('Error updating project status:', error.message);
       toast.error('Failed to update project status');
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    try {
+      const bucketName = `project-${projectId}`;
+      const tags = newFileTags.split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0);
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const filePath = `${Date.now()}-${file.name}`;
+        
+        const { data, error } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, file);
+          
+        if (error) {
+          toast.error(`Failed to upload ${file.name}: ${error.message}`);
+        } else {
+          // Save file metadata with tags
+          const { error: metadataError } = await supabase
+            .from('file_data')
+            .insert({
+              project_id: projectId,
+              file_name: filePath,
+              tags: tags,
+            });
+            
+          if (metadataError) {
+            console.error('Error saving file metadata:', metadataError);
+            toast.error(`File uploaded but failed to save tags: ${metadataError.message}`);
+          } else {
+            toast.success(`${file.name} uploaded successfully with tags`);
+          }
+        }
+      }
+      
+      // Reset the file input using the ref
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      
+      setNewFileTags('');
+      fetchProjectFiles();
+    } catch (error) {
+      toast.error("An unexpected error occurred during upload");
+      // Also reset on error
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+  
+  const updateFileTags = async (fileName: string, tags: string[]) => {
+    try {
+      const { error } = await supabase
+        .from('file_data')
+        .update({ tags })
+        .eq('project_id', projectId)
+        .eq('file_name', fileName);
+        
+      if (error) {
+        console.error('Error updating file tags:', error);
+        toast.error('Failed to update tags');
+        return false;
+      }
+      
+      toast.success('Tags updated successfully');
+      return true;
+    } catch (err) {
+      console.error('Error in updateFileTags:', err);
+      toast.error('An error occurred while updating tags');
+      return false;
+    }
+  };
+  
+  const getFilteredFiles = () => {
+    if (!fileTagFilter.trim()) return projectFiles;
+    
+    return projectFiles.filter(file => 
+      file.tags.some(tag => 
+        tag.toLowerCase().includes(fileTagFilter.toLowerCase())
+      )
+    );
+  };
+
+  const openTagEditDialog = (file: ProjectFile) => {
+    setFileToEditTags(file);
+    setEditingTags(file.tags.join(', '));
+    setIsTagEditDialogOpen(true);
+  };
+  
+  const handleSaveFileTags = async () => {
+    if (!fileToEditTags) return;
+    
+    const tagArray = editingTags.split(',')
+      .map(t => t.trim())
+      .filter(t => t.length > 0);
+      
+    const success = await updateFileTags(fileToEditTags.name, tagArray);
+    
+    if (success) {
+      setProjectFiles(projectFiles.map(f => 
+        f.name === fileToEditTags.name ? { ...f, tags: tagArray } : f
+      ));
+      setIsTagEditDialogOpen(false);
     }
   };
 
@@ -606,45 +763,57 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <label className="block min-h-[100px] rounded-lg border-2 border-dashed border-primary/20 hover:border-primary/50 transition-colors flex flex-col items-center justify-center gap-3 p-4 cursor-pointer bg-background">
-                  <input 
-                    type="file" 
-                    className="hidden" 
-                    onChange={async (e) => {
-                      const files = e.target.files;
-                      if (!files || files.length === 0) return;
-                      
-                      try {
-                        const bucketName = `project-${projectId}`;
-                        
-                        for (let i = 0; i < files.length; i++) {
-                          const file = files[i];
-                          const filePath = `${Date.now()}-${file.name}`;
-                          
-                          const { data, error } = await supabase.storage
-                            .from(bucketName)
-                            .upload(filePath, file);
-                            
-                          if (error) {
-                            toast.error(`Failed to upload ${file.name}: ${error.message}`);
-                          } else {
-                            toast.success(`${file.name} uploaded successfully`);
-                          }
-                        }
-                        
-                        fetchProjectFiles();
-                      } catch (error) {
-                        toast.error("An unexpected error occurred during upload");
-                      }
-                    }}
-                    multiple
-                  />
-                  <Upload className="h-6 w-6 text-primary/50" />
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-primary">Drop files here or click to upload</p>
-                    <p className="text-xs text-muted-foreground mt-1">Upload multiple files at once</p>
+                <div className="space-y-4">
+                  <label className="block min-h-[100px] rounded-lg border-2 border-dashed border-primary/20 hover:border-primary/50 transition-colors flex flex-col items-center justify-center gap-3 p-4 cursor-pointer bg-background">
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      ref={fileInputRef}
+                      onChange={handleFileUpload}
+                      multiple
+                    />
+                    <Upload className="h-6 w-6 text-primary/50" />
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-primary">Drop files here or click to upload</p>
+                      <p className="text-xs text-muted-foreground mt-1">Upload multiple files at once</p>
+                    </div>
+                  </label>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Add Tags (comma separated)</label>
+                    <Input
+                      value={newFileTags}
+                      onChange={(e) => setNewFileTags(e.target.value)}
+                      placeholder="e.g. invoice, contract, design"
+                      className="border-primary/20"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Tags will be applied to all files in this upload
+                    </p>
                   </div>
-                </label>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Filter by tag</label>
+                    {fileTagFilter && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setFileTagFilter('')}
+                        className="h-6 px-2 text-xs"
+                      >
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+                  <Input
+                    value={fileTagFilter}
+                    onChange={(e) => setFileTagFilter(e.target.value)}
+                    placeholder="Type to filter by tag"
+                    className="border-primary/20"
+                  />
+                </div>
                 
                 {isLoadingFiles ? (
                   <div className="flex justify-center py-8">
@@ -652,38 +821,61 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {projectFiles.map((file, index) => (
+                    {getFilteredFiles().map((file, index) => (
                       <div
                         key={index}
-                        className="flex items-center justify-between p-3 rounded-lg border border-primary/20 hover:bg-primary/5 group min-w-0 w-full"
+                        className="flex flex-col p-3 rounded-lg border border-primary/20 hover:bg-primary/5 group min-w-0 w-full"
                       >
-                        <div className="flex items-center space-x-4 overflow-hidden">
-                          <File className="h-5 w-5 text-primary flex-shrink-0" />
-                          <div className="overflow-hidden">
-                            <p className="text-sm font-medium break-all">{file.name}</p>
-                            <a
-                              href={file.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-primary hover:underline"
+                        <div className="flex items-center justify-between overflow-hidden mb-2">
+                          <div className="flex items-center space-x-4 overflow-hidden">
+                            <File className="h-5 w-5 text-primary flex-shrink-0" />
+                            <div className="overflow-hidden">
+                              <p className="text-sm font-medium break-all">{file.name}</p>
+                              <a
+                                href={file.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary hover:underline"
+                              >
+                                Download
+                              </a>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setFileToDelete(file.name)}
+                            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity ml-4 flex-shrink-0"
+                          >
+                            <Trash className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                        
+                        <div className="mt-2">
+                          <div className="flex flex-wrap gap-1">
+                            {file.tags.map((tag, tagIndex) => (
+                              <span 
+                                key={tagIndex} 
+                                className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openTagEditDialog(file)}
+                              className="h-6 px-2 text-xs"
                             >
-                              Download
-                            </a>
+                              {file.tags.length > 0 ? 'Edit tags' : 'Add tags'}
+                            </Button>
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setFileToDelete(file.name)}
-                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity ml-4 flex-shrink-0"
-                        >
-                          <Trash className="h-4 w-4 text-destructive" />
-                        </Button>
                       </div>
                     ))}
-                    {projectFiles.length === 0 && (
+                    {getFilteredFiles().length === 0 && (
                       <div className="col-span-2 text-center py-8 text-muted-foreground">
-                        No files uploaded yet
+                        {projectFiles.length === 0 ? 'No files uploaded yet' : 'No files match the current tag filter'}
                       </div>
                     )}
                   </div>
@@ -908,6 +1100,78 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Tag Edit Dialog */}
+      <Dialog open={isTagEditDialogOpen} onOpenChange={setIsTagEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit File Tags</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="flex items-center space-x-3">
+              <File className="h-5 w-5 text-primary" />
+              <p className="text-sm font-medium break-all">
+                {fileToEditTags?.name}
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="tags" className="text-sm font-medium">
+                Tags (comma separated)
+              </label>
+              <Input
+                id="tags"
+                value={editingTags}
+                onChange={(e) => setEditingTags(e.target.value)}
+                placeholder="e.g. invoice, contract, design"
+                className="border-primary/20"
+              />
+              <p className="text-xs text-muted-foreground">
+                Separate multiple tags with commas
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Suggested Tags</label>
+              <div className="flex flex-wrap gap-1">
+                {['invoice', 'contract', 'design', 'report', 'image', 'document'].map((tag) => (
+                  <Button
+                    key={tag}
+                    variant="outline"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => {
+                      const currentTags = editingTags.split(',').map(t => t.trim()).filter(t => t.length > 0);
+                      if (!currentTags.includes(tag)) {
+                        const newTags = [...currentTags, tag].join(', ');
+                        setEditingTags(newTags);
+                      }
+                    }}
+                  >
+                    {tag}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex justify-end space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsTagEditDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveFileTags}
+              className="bg-primary hover:bg-primary/90"
+            >
+              Save Tags
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-} 
+    }
