@@ -26,6 +26,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import Link from "next/link";
 
 interface Task {
@@ -320,6 +327,23 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     </div>
   );
 
+  const handleStatusChange = async (newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ status: newStatus })
+        .eq('id', projectId);
+        
+      if (error) throw error;
+      
+      setProjectStatus(newStatus);
+      toast.success('Project status updated successfully');
+    } catch (error: any) {
+      console.error('Error updating project status:', error.message);
+      toast.error('Failed to update project status');
+    }
+  };
+
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       {/* Header Section */}
@@ -332,17 +356,55 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </Button>
           </Link>
           <h1 className="text-3xl font-bold absolute left-1/2 transform -translate-x-1/2">{projectName}</h1>
-          {projectStatus && (
-            <span className={`px-4 py-2 rounded-full text-sm font-medium ${
-              projectStatus === 'Completed' ? 'bg-green-100 text-green-800' :
-              projectStatus === 'Active' ? 'bg-blue-100 text-blue-800' :
-              projectStatus === 'On Hold' ? 'bg-yellow-100 text-yellow-800' :
-              projectStatus === 'Cancelled' ? 'bg-red-100 text-red-800' :
-              'bg-gray-100 text-gray-800'
+          <Select
+            value={projectStatus}
+            onValueChange={handleStatusChange}
+          >
+            <SelectTrigger className={`w-[140px] h-8 border-0 ${
+              projectStatus === 'Completed' ? 'bg-green-500/20 hover:bg-green-500/30 dark:bg-green-500/30 dark:hover:bg-green-500/40' :
+              projectStatus === 'Active' ? 'bg-blue-500/20 hover:bg-blue-500/30 dark:bg-blue-500/30 dark:hover:bg-blue-500/40' :
+              projectStatus === 'On Hold' ? 'bg-amber-500/20 hover:bg-amber-500/30 dark:bg-amber-500/30 dark:hover:bg-amber-500/40' :
+              projectStatus === 'Cancelled' ? 'bg-red-500/20 hover:bg-red-500/30 dark:bg-red-500/30 dark:hover:bg-red-500/40' :
+              'bg-gray-500/20 hover:bg-gray-500/30 dark:bg-gray-500/30 dark:hover:bg-gray-500/40'
             }`}>
-              {projectStatus}
-            </span>
-          )}
+              <SelectValue 
+                placeholder="Set Status"
+                className={`text-sm font-semibold ${
+                  projectStatus === 'Completed' ? 'text-green-700 dark:text-green-300' :
+                  projectStatus === 'Active' ? 'text-blue-700 dark:text-blue-300' :
+                  projectStatus === 'On Hold' ? 'text-amber-700 dark:text-amber-300' :
+                  projectStatus === 'Cancelled' ? 'text-red-700 dark:text-red-300' :
+                  'text-gray-700 dark:text-gray-300'
+                }`}
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem 
+                value="Active" 
+                className="text-blue-700 dark:text-blue-300 hover:bg-blue-500/20 dark:hover:bg-blue-500/20 font-medium"
+              >
+                Active
+              </SelectItem>
+              <SelectItem 
+                value="On Hold" 
+                className="text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 dark:hover:bg-amber-500/20 font-medium"
+              >
+                On Hold
+              </SelectItem>
+              <SelectItem 
+                value="Completed" 
+                className="text-green-700 dark:text-green-300 hover:bg-green-500/20 dark:hover:bg-green-500/20 font-medium"
+              >
+                Completed
+              </SelectItem>
+              <SelectItem 
+                value="Cancelled" 
+                className="text-red-700 dark:text-red-300 hover:bg-red-500/20 dark:hover:bg-red-500/20 font-medium"
+              >
+                Cancelled
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         
         {/* Project Overview Stats */}
