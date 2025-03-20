@@ -505,14 +505,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     <div className="container mx-auto p-6 max-w-7xl">
       {/* Header Section */}
       <div className="flex flex-col space-y-4 mb-8">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <Link href="/dashboard">
             <Button variant="ghost" size="sm" className="gap-2">
               <ArrowLeft className="h-4 w-4" />
               Back to Dashboard
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold absolute left-1/2 transform -translate-x-1/2">{projectName}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-center sm:absolute sm:left-1/2 sm:transform sm:-translate-x-1/2">{projectName}</h1>
           <Select
             value={projectStatus}
             onValueChange={handleStatusChange}
@@ -565,7 +565,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </div>
         
         {/* Project Overview Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="bg-primary/5">
             <CardContent className="pt-6">
               <div className="text-center">
@@ -586,7 +586,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-sm font-medium text-muted-foreground mb-2">Total Budget</p>
-                <p className="text-3xl font-bold">${projectBudget.toLocaleString()}</p>
+                <p className={`font-bold ${
+                  projectBudget.toLocaleString().length > 12 ? 'text-base' :
+                  projectBudget.toLocaleString().length > 8 ? 'text-lg md:text-xl lg:text-2xl' :
+                  'text-2xl md:text-3xl'
+                }`}>
+                  ${projectBudget.toLocaleString()}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -594,7 +600,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-sm font-medium text-muted-foreground mb-2">Budget Used</p>
-                <p className="text-3xl font-bold">${budgetUsage.toLocaleString()}</p>
+                <p className={`font-bold ${
+                  budgetUsage.toLocaleString().length > 12 ? 'text-base' :
+                  budgetUsage.toLocaleString().length > 8 ? 'text-lg md:text-xl lg:text-2xl' :
+                  'text-2xl md:text-3xl'
+                }`}>
+                  ${budgetUsage.toLocaleString()}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -624,9 +636,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           {/* Budget Section with larger chart */}
           <Card className="border-primary/20">
             <CardHeader>
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <CardTitle>Budget Overview</CardTitle>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -674,7 +686,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   </Button>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-8 p-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-4">
                   <div className="space-y-6">
                     <div>
                       <h3 className="text-lg font-semibold mb-2">Budget Status</h3>
@@ -748,7 +760,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           {/* Files Section with grid layout */}
           <Card className="border-primary/20">
             <CardHeader>
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <CardTitle>Project Files</CardTitle>
                 <Button 
                   variant="outline" 
@@ -820,7 +832,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     <RefreshCw className="h-8 w-8 animate-spin text-primary" />
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4">
                     {getFilteredFiles().map((file, index) => (
                       <div
                         key={index}
@@ -889,7 +901,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       {/* Expenses Section - Full Width */}
       <Card className="mt-6 border-primary/20">
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
             <CardTitle>Expenses</CardTitle>
             <Button
               variant="outline"
@@ -908,7 +920,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               <RefreshCw className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {expenses.length === 0 ? (
                 <div className="col-span-full text-center text-muted-foreground py-8">
                   No expenses recorded yet
@@ -1174,4 +1186,4 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       </Dialog>
     </div>
   );
-    }
+}
