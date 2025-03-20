@@ -18,18 +18,60 @@ export default function DashboardPage() {
   const supabase = createClient();
 
   const getOrgs = async () => {
-    const { data: userOrgs } = await supabase
-      .from('user-org')
-      .select('*');
+    if (!user) return;
 
-    if (userOrgs && userOrgs.length > 0) {
-      const orgIds = userOrgs.map(uo => uo.org_id);
-      const { data: organizations } = await supabase
-        .from('organizations')
-        .select('id, name')
-        .in('id', orgIds);
+    // Check if user is a contractor
+    const { data: userData } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    
+    const isContractor = userData?.role === 'Contractor';
+    
+    if (isContractor) {
+      // For contractors, we don't load organizations
+      setOrgsList([]);
+      
+      // Instead, load all projects the contractor is associated with
+      const { data: userProjects } = await supabase
+        .from('user-project')
+        .select('project_id')
+        .eq('user_id', user.id);
+        
+      if (userProjects && userProjects.length > 0) {
+        const projectIds = userProjects.map(up => up.project_id);
+        const { data: projects } = await supabase
+          .from('projects')
+          .select(`
+            *,
+            organization:organizations(
+              name
+            )
+          `)
+          .in('id', projectIds)
+          .order('name');
+          
+        setProjectsList(projects || []);
+      } else {
+        setProjectsList([]);
+      }
+    } else {
+      // Original code for non-contractor users
+      const { data: userOrgs } = await supabase
+        .from('user-org')
+        .select('*')
+        .eq('user_id', user.id);
+      
+      if (userOrgs && userOrgs.length > 0) {
+        const orgIds = userOrgs.map(uo => uo.org_id);
+        const { data: organizations } = await supabase
+          .from('organizations')
+          .select('id, name')
+          .in('id', orgIds);
 
-      setOrgsList(organizations || []);
+        setOrgsList(organizations || []);
+      }
     }
   };
 
@@ -51,27 +93,6 @@ export default function DashboardPage() {
     setSelectedProject(null); // Reset project selection when org changes
   };
 
-  const handleStatusChange = async (projectId: number, newStatus: string) => {
-    try {
-      const { error } = await supabase
-        .from('projects')
-        .update({ status: newStatus })
-        .eq('id', projectId);
-        
-      if (error) throw error;
-      
-      // Update the projects list with the new status
-      setProjectsList(projectsList.map(project => 
-        project.id === projectId 
-          ? { ...project, status: newStatus } 
-          : project
-      ));
-    } catch (error: any) {
-      console.error('Error updating project status:', error.message);
-      alert(`Failed to update project status: ${error.message}`);
-    }
-  };
-
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -88,23 +109,12 @@ export default function DashboardPage() {
   }, [user]);
 
   useEffect(() => {
-    if (selectedOrg) {
+    // Only fetch projects based on org for non-contractors
+    // Contractors already have their projects loaded in getOrgs
+    if (selectedOrg && orgsList.length > 0) {
       getProjects();
     }
-  }, [selectedOrg]);
-
-  const getCurrentProject = () => {
-    const project = projectsList.find(p => p.id.toString() === selectedProject);
-    return project ? {
-      id: project.id,
-      name: project.name,
-      progress: 0, // You can add these fields to your project data if needed
-      tasks: '0/0',
-      budget: 0,
-      time: '0h',
-      // Add any other required fields
-    } : null;
-  };
+  }, [selectedOrg, orgsList.length]);
 
   // Calculate status counts
   const getStatusCounts = () => {
@@ -134,39 +144,41 @@ export default function DashboardPage() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Organization Selector Card */}
-        <Card className="w-full">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-muted-foreground" />
-                <CardTitle className="text-base font-medium">Organization</CardTitle>
+        {/* Organization Selector Card - Only show for non-contractors */}
+        {orgsList.length > 0 && (
+          <Card className="w-full">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-muted-foreground" />
+                  <CardTitle className="text-base font-medium">Organization</CardTitle>
+                </div>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Select
-              value={selectedOrg?.toString()}
-              onValueChange={(value) => {
-                setSelectedOrg(value);
-              }}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select organization" className="truncate" />
-              </SelectTrigger>
-              <SelectContent>
-                {orgsList.map((org) => (
-                  <SelectItem key={org.id} value={org.id.toString()} className="truncate">
-                    {org.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent>
+              <Select
+                value={selectedOrg?.toString()}
+                onValueChange={(value) => {
+                  setSelectedOrg(value);
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select organization" className="truncate" />
+                </SelectTrigger>
+                <SelectContent>
+                  {orgsList.map((org) => (
+                    <SelectItem key={org.id} value={org.id.toString()} className="truncate">
+                      {org.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Projects and Status Summary */}
-        {selectedOrg && projectsList.length > 0 && (
+        {/* Projects and Status Summary - Modified to show for both contractors and regular users */}
+        {((selectedOrg && projectsList.length > 0) || (orgsList.length === 0 && projectsList.length > 0)) && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {/* Projects List - Takes 3/4 of the space on medium screens and up */}
             <div className="md:col-span-3">
