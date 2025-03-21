@@ -91,6 +91,7 @@ export default function AdminPage() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [roleChangeConfirmOpen, setRoleChangeConfirmOpen] = useState(false);
   const [userToChangeRole, setUserToChangeRole] = useState<UserToChangeRole | null>(null);
+  const [displayRoles, setDisplayRoles] = useState<Record<string, string>>({});
   const supabase = createClient();
 
   useEffect(() => {
@@ -184,6 +185,15 @@ export default function AdminPage() {
       })) || [];
       
       setUsers(transformedUsers);
+      
+      // When users are loaded, initialize the displayRoles state
+      const initialDisplayRoles: Record<string, string> = {};
+      transformedUsers.forEach(user => {
+        if (user.role) {
+          initialDisplayRoles[user.id] = user.role;
+        }
+      });
+      setDisplayRoles(initialDisplayRoles);
         
       // Get all projects with organization details
       const { data: projectsData } = await supabase
@@ -392,13 +402,25 @@ export default function AdminPage() {
           ? { ...user, role: newRole } 
           : user
       ));
+      
+      // Update the displayed role
+      setDisplayRoles(prev => ({
+        ...prev,
+        [userId]: newRole
+      }));
     } catch (error: any) {
       console.error('Error updating user role:', error.message);
       alert(`Failed to update user role: ${error.message}`);
+      
+      // Reset the displayed role to the actual value in the database
+      setDisplayRoles(prev => ({
+        ...prev,
+        [userId]: currentUser?.role || prev[userId]
+      }));
     }
   };
 
-  // Update the confirmRoleChange function to handle switching from Contractor
+  // Update the confirmRoleChange function
   const confirmRoleChange = async () => {
     if (!userToChangeRole) return;
     
@@ -448,9 +470,24 @@ export default function AdminPage() {
         }
         return user;
       }));
+      
+      // Update the displayed role
+      setDisplayRoles(prev => ({
+        ...prev,
+        [userToChangeRole.id]: userToChangeRole.newRole
+      }));
     } catch (error: any) {
       console.error('Error updating user role:', error.message);
       alert(`Failed to update user role: ${error.message}`);
+      
+      // Reset the displayed role to the original value
+      const currentUser = users.find(u => u.id === userToChangeRole.id);
+      if (currentUser && currentUser.role) {
+        setDisplayRoles(prev => ({
+          ...prev,
+          [userToChangeRole.id]: currentUser.role || prev[userToChangeRole.id]
+        }));
+      }
     } finally {
       setRoleChangeConfirmOpen(false);
       setUserToChangeRole(null);
@@ -547,7 +584,7 @@ export default function AdminPage() {
                 <div className="text-sm font-medium text-primary">Role</div>
                 <div className="text-sm">
                   <Select
-                    defaultValue={user.role ?? undefined}
+                    value={displayRoles[user.id] || user.role || undefined}
                     onValueChange={(value) => handleRoleChange(user.id, value)}
                     disabled={user.id === publicUser?.id} // Prevent changing own role
                   >
@@ -609,7 +646,7 @@ export default function AdminPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <Select
-                      defaultValue={user.role ?? undefined}
+                      value={displayRoles[user.id] || user.role || undefined}
                       onValueChange={(value) => handleRoleChange(user.id, value)}
                       disabled={user.id === publicUser?.id}
                     >
@@ -865,7 +902,24 @@ export default function AdminPage() {
       </AlertDialog>
 
       {/* Role Change Confirmation Dialog */}
-      <AlertDialog open={roleChangeConfirmOpen} onOpenChange={setRoleChangeConfirmOpen}>
+      <AlertDialog 
+        open={roleChangeConfirmOpen} 
+        onOpenChange={(open) => {
+          // If dialog is closing and it's not a confirmation (userToChangeRole still exists)
+          if (!open && userToChangeRole) {
+            // Reset the display role to the current database value
+            const currentUser = users.find(u => u.id === userToChangeRole.id);
+            if (currentUser && currentUser.role) {
+              setDisplayRoles(prev => ({
+                ...prev, 
+                [userToChangeRole.id]: currentUser.role || prev[userToChangeRole.id]
+              }));
+            }
+            setUserToChangeRole(null);
+          }
+          setRoleChangeConfirmOpen(open);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Change User Role?</AlertDialogTitle>
@@ -878,7 +932,7 @@ export default function AdminPage() {
               ) : (
                 <>
                   Changing this user from a Contractor will remove all their project assignments.
-                  Regular users are associated with organizations instead of specific projects.
+                  Non-Contractor users are associated with organizations instead of specific projects.
                 </>
               )}
             </AlertDialogDescription>
