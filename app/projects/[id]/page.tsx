@@ -83,10 +83,35 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [isTagEditDialogOpen, setIsTagEditDialogOpen] = useState(false);
   const [fileToEditTags, setFileToEditTags] = useState<ProjectFile | null>(null);
   const [editingTags, setEditingTags] = useState<string>('');
+  const [isOrgOwner, setIsOrgOwner] = useState<boolean>(false);
   const supabase = createClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const fetchUserRole = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: userData, error } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching user role:', error);
+          return;
+        }
+
+        setIsOrgOwner(userData?.role === 'Org Owner');
+      } catch (error) {
+        console.error('Error in fetchUserRole:', error);
+      }
+    };
+
+    fetchUserRole();
+
     const fetchProjectDetails = async () => {
       const { data: project } = await supabase
         .from('projects')
@@ -614,6 +639,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 projectId={parseInt(projectId)} 
                 tasks={curr_tasks}
                 onTasksChange={handleTasksChange}
+                isOrgOwner={isOrgOwner}
               />
             </div>
           </CardContent>
@@ -636,14 +662,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     <BarChart3 className="h-4 w-4 mr-2" />
                     View Detailed Chart
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setIsEditingBudget(!isEditingBudget)}
-                    className="h-8 px-2"
-                  >
-                    {isEditingBudget ? 'Cancel' : 'Edit Budget'}
-                  </Button>
+                  {!isOrgOwner && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setIsEditingBudget(!isEditingBudget)}
+                      className="h-8 px-2"
+                    >
+                      {isEditingBudget ? 'Cancel' : 'Edit Budget'}
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardHeader>
@@ -652,7 +680,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <div className="flex items-center justify-center h-[300px]">
                   <RefreshCw className="h-8 w-8 animate-spin text-primary" />
                 </div>
-              ) : isEditingBudget ? (
+              ) : isEditingBudget && !isOrgOwner ? (
                 <div className="space-y-4 p-4">
                   <div className="flex items-center space-x-2">
                     <span className="text-xl font-bold">$</span>
@@ -763,35 +791,38 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="space-y-4">
-                  <label className="block min-h-[100px] rounded-lg border-2 border-dashed border-primary/20 hover:border-primary/50 transition-colors flex flex-col items-center justify-center gap-3 p-4 cursor-pointer bg-background">
-                    <input 
-                      type="file" 
-                      className="hidden" 
-                      ref={fileInputRef}
-                      onChange={handleFileUpload}
-                      multiple
-                    />
-                    <Upload className="h-6 w-6 text-primary/50" />
-                    <div className="text-center">
-                      <p className="text-sm font-medium text-primary">Drop files here or click to upload</p>
-                      <p className="text-xs text-muted-foreground mt-1">Upload multiple files at once</p>
+                {/* Only show file upload and tag input if not org owner */}
+                {!isOrgOwner && (
+                  <div className="space-y-4">
+                    <label className="block min-h-[100px] rounded-lg border-2 border-dashed border-primary/20 hover:border-primary/50 transition-colors flex flex-col items-center justify-center gap-3 p-4 cursor-pointer bg-background">
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        ref={fileInputRef}
+                        onChange={handleFileUpload}
+                        multiple
+                      />
+                      <Upload className="h-6 w-6 text-primary/50" />
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-primary">Drop files here or click to upload</p>
+                        <p className="text-xs text-muted-foreground mt-1">Upload multiple files at once</p>
+                      </div>
+                    </label>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Add Tags (comma separated)</label>
+                      <Input
+                        value={newFileTags}
+                        onChange={(e) => setNewFileTags(e.target.value)}
+                        placeholder="e.g. invoice, contract, design"
+                        className="border-primary/20"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Tags will be applied to all files in this upload
+                      </p>
                     </div>
-                  </label>
-                  
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Add Tags (comma separated)</label>
-                    <Input
-                      value={newFileTags}
-                      onChange={(e) => setNewFileTags(e.target.value)}
-                      placeholder="e.g. invoice, contract, design"
-                      className="border-primary/20"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Tags will be applied to all files in this upload
-                    </p>
                   </div>
-                </div>
+                )}
                 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -841,14 +872,17 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                               </a>
                             </div>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setFileToDelete(file.name)}
-                            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity ml-4 flex-shrink-0"
-                          >
-                            <Trash className="h-4 w-4 text-destructive" />
-                          </Button>
+                          {/* Only show delete button if not org owner */}
+                          {!isOrgOwner && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setFileToDelete(file.name)}
+                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity ml-4 flex-shrink-0"
+                            >
+                              <Trash className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
                         </div>
                         
                         <div className="mt-2">
@@ -861,14 +895,17 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 {tag}
                               </span>
                             ))}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openTagEditDialog(file)}
-                              className="h-6 px-2 text-xs"
-                            >
-                              {file.tags.length > 0 ? 'Edit tags' : 'Add tags'}
-                            </Button>
+                            {/* Only show edit tags button if not org owner */}
+                            {!isOrgOwner && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openTagEditDialog(file)}
+                                className="h-6 px-2 text-xs"
+                              >
+                                {file.tags.length > 0 ? 'Edit tags' : 'Add tags'}
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -891,15 +928,17 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>Expenses</CardTitle>
-            <Button
-              variant="outline"
-              size="default"
-              onClick={handleAddExpense}
-              className="border-primary/20 hover:bg-primary/5"
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              Add Expense
-            </Button>
+            {!isOrgOwner && (
+              <Button
+                variant="outline"
+                size="default"
+                onClick={handleAddExpense}
+                className="border-primary/20 hover:bg-primary/5"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                Add Expense
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -917,7 +956,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 expenses.map((expense) => (
                   <Card key={expense.id} className="border-primary/10">
                     <CardContent className="p-4">
-                      {expense.isEditing ? (
+                      {expense.isEditing && !isOrgOwner ? (
                         <div className="space-y-4">
                           {renderExpenseForm(expense)}
                           <div className="flex flex-col gap-2 border-t border-primary/10 pt-3 mt-4">
@@ -1006,47 +1045,49 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                               ${parseFloat(expense.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                             </div>
                           </div>
-                          <div className="flex justify-end space-x-2 mt-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setExpenses(expenses.map(exp =>
-                                  exp.id === expense.id
-                                    ? { ...exp, isEditing: true }
-                                    : exp
-                                ));
-                              }}
-                              className="h-8 px-2"
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={async () => {
-                                try {
-                                  if (expense.dbId) {
-                                    const { error } = await supabase
-                                      .from('expenses')
-                                      .delete()
-                                      .eq('id', expense.dbId);
+                          {!isOrgOwner && (
+                            <div className="flex justify-end space-x-2 mt-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setExpenses(expenses.map(exp =>
+                                    exp.id === expense.id
+                                      ? { ...exp, isEditing: true }
+                                      : exp
+                                  ));
+                                }}
+                                className="h-8 px-2"
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={async () => {
+                                  try {
+                                    if (expense.dbId) {
+                                      const { error } = await supabase
+                                        .from('expenses')
+                                        .delete()
+                                        .eq('id', expense.dbId);
 
-                                    if (error) throw error;
+                                      if (error) throw error;
+                                    }
+                                    setExpenses(expenses.filter(exp => exp.id !== expense.id));
+                                    toast.success('Expense deleted successfully');
+                                    fetchProjectBudget();
+                                  } catch (error: any) {
+                                    console.error('Error deleting expense:', error);
+                                    toast.error('Failed to delete expense');
                                   }
-                                  setExpenses(expenses.filter(exp => exp.id !== expense.id));
-                                  toast.success('Expense deleted successfully');
-                                  fetchProjectBudget();
-                                } catch (error: any) {
-                                  console.error('Error deleting expense:', error);
-                                  toast.error('Failed to delete expense');
-                                }
-                              }}
-                              className="h-8 px-2 text-destructive hover:text-destructive"
-                            >
-                              Delete
-                            </Button>
-                          </div>
+                                }}
+                                className="h-8 px-2 text-destructive hover:text-destructive"
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </CardContent>
@@ -1174,4 +1215,4 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       </Dialog>
     </div>
   );
-    }
+}
