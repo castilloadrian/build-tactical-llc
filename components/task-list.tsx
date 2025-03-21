@@ -320,7 +320,7 @@ export function TaskList({ tasks, onTasksChange, projectId, isOrgOwner }: TaskLi
             return (
               <div 
                 key={task.id} 
-                className={`grid grid-cols-[${!isOrgOwner ? 'auto_' : ''}1fr${!isOrgOwner ? '_auto_auto' : ''}] gap-4 items-start bg-muted/10 p-4 rounded-lg
+                className={`grid grid-cols-[${!isOrgOwner ? 'auto_' : ''}1fr${!isOrgOwner ? '_auto' : ''}] gap-4 items-start bg-muted/10 p-4 rounded-lg
                   ${isOverdue ? 'border-2 border-red-500 bg-red-50/10 overdue-task' : ''}
                   ${isWarning ? 'border-2 border-amber-500 bg-amber-50/10' : ''}
                 `}
@@ -406,7 +406,7 @@ export function TaskList({ tasks, onTasksChange, projectId, isOrgOwner }: TaskLi
                     </div>
                     {/* Only show edit and delete buttons if not org owner */}
                     {!isOrgOwner && (
-                      <>
+                      <div className="flex space-x-1 justify-end">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -423,7 +423,7 @@ export function TaskList({ tasks, onTasksChange, projectId, isOrgOwner }: TaskLi
                         >
                           <Trash2 className="h-5 w-5" />
                         </Button>
-                      </>
+                      </div>
                     )}
                   </>
                 )}
