@@ -118,7 +118,7 @@ export default async function ProfilePage() {
       </div>
 
       {/* Conditional Organizations/Projects Section */}
-      <div className="mb-8">
+      <div className="mb-8 mt-8 md:mt-0">
         {userRole === 'Contractor' ? (
           // Projects Section for Contractors
           <>

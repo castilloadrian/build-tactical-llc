@@ -658,6 +658,18 @@ export default function AdminPage() {
                 <div className="text-sm break-words">
                   {org.created_at ? new Date(org.created_at).toLocaleDateString() : 'N/A'}
                 </div>
+                
+                <div className="text-sm font-medium text-primary">Actions</div>
+                <div className="text-sm">
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => confirmDelete('organization', org.id, org.name ?? 'Unnamed Organization')}
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           ))}
@@ -744,6 +756,18 @@ export default function AdminPage() {
                       <SelectItem value="Cancelled">Cancelled</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                
+                <div className="text-sm font-medium text-primary">Actions</div>
+                <div className="text-sm">
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => confirmDelete('project', project.id, project.name ?? 'Unnamed Project')}
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             </div>
