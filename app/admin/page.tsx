@@ -556,7 +556,7 @@ export default function AdminPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Admin">Admin</SelectItem>
-                      <SelectItem value="User">User</SelectItem>
+                      <SelectItem value="Org Owner">Org Owner</SelectItem>
                       <SelectItem value="Contractor">Contractor</SelectItem>
                     </SelectContent>
                   </Select>
@@ -618,7 +618,7 @@ export default function AdminPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Admin">Admin</SelectItem>
-                        <SelectItem value="User">User</SelectItem>
+                        <SelectItem value="Org Owner">Org Owner</SelectItem>
                         <SelectItem value="Contractor">Contractor</SelectItem>
                       </SelectContent>
                     </Select>
