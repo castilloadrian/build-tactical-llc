@@ -9,6 +9,7 @@ export const signUpAction = async (formData: FormData) => {
   const email = formData.get("email")?.toString();
   const password = formData.get("password")?.toString();
   const fullName = formData.get("fullName")?.toString();
+  const org_proj = formData.get("org_proj")?.toString();
   const supabase = await createClient();
   const origin = (await headers()).get("origin");
 
@@ -27,6 +28,7 @@ export const signUpAction = async (formData: FormData) => {
       emailRedirectTo: `${origin}/auth/callback`,
       data: {
         full_name: fullName,
+        org_proj: org_proj,
       }
     },
   });

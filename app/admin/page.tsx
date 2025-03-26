@@ -39,6 +39,7 @@ interface UserData {
   full_name: string | null;
   email: string | null;
   role: string | null;
+  proposed_org_proj: string | null;
   organizations?: {
     id: number;
     name: string | null;
@@ -132,6 +133,7 @@ export default function AdminPage() {
         full_name: publicUserData.full_name,
         email: publicUserData.email,
         role: publicUserData.role,
+        proposed_org_proj: publicUserData.proposed_org_proj,
         organizations: publicUserData.organizations?.map((org: any) => ({
           id: org.organization.id,
           name: org.organization.name,
@@ -169,6 +171,7 @@ export default function AdminPage() {
         full_name: user.full_name,
         email: user.email,
         role: user.role,
+        proposed_org_proj: user.proposed_org_proj,
         organizations: user.organizations?.map((org: any) => ({
           id: org.organization.id,
           name: org.organization.name,
@@ -515,6 +518,7 @@ export default function AdminPage() {
       full_name: user.full_name,
       email: user.email,
       role: user.role,
+      proposed_org_proj: user.proposed_org_proj,
       organizations: user.organizations?.map((org: any) => ({
         id: org.organization.id,
         name: org.organization.name,
@@ -581,6 +585,9 @@ export default function AdminPage() {
                   )}
                 </div>
                 
+                <div className="text-sm font-medium text-primary">Proposed Organization/Project</div>
+                <div className="text-sm break-words">{user.proposed_org_proj || 'N/A'}</div>
+                
                 <div className="text-sm font-medium text-primary">Role</div>
                 <div className="text-sm">
                   <Select
@@ -611,6 +618,7 @@ export default function AdminPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Name</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Email</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Organizations/Projects</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Proposed Organization/Project</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-primary uppercase tracking-wider">Role</th>
               </tr>
             </thead>
@@ -644,6 +652,7 @@ export default function AdminPage() {
                       )}
                     </div>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap">{user.proposed_org_proj || 'N/A'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <Select
                       value={displayRoles[user.id] || user.role || undefined}
