@@ -97,12 +97,6 @@ export default function Contact() {
             {isLoading ? "Sending..." : "Send Message"}
           </Button>
         </form>
-        
-        <div className="mt-8 text-center">
-          <Link href="/">
-            <Button variant="outline">Back to Home</Button>
-          </Link>
-        </div>
       </div>
     </div>
   );

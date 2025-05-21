@@ -48,7 +48,16 @@ export default async function RootLayout({
                 <div className="w-full max-w-5xl flex justify-between items-center p-3 px-5 text-sm">
                   <div className="flex gap-5 items-center font-semibold text-accent">
                     <Link href={"/"}>Build Tactical LLC</Link>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-4">
+                      <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors font-semibold">Dashboard</Link>
+                      <Link href="/contractor-directory" className="text-muted-foreground hover:text-foreground transition-colors">Contractor Directory</Link>
+                      <Link href="/government-directory" className="text-muted-foreground hover:text-foreground transition-colors">Government Directory</Link>
+                      <Link href="/learn-more" className="text-muted-foreground hover:text-foreground transition-colors">Learn More</Link>
+                      <Link href="/blog" className="text-muted-foreground hover:text-foreground transition-colors">Blog</Link>
+                      { !user && (
+                        <Link href="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">Pricing</Link>
+                      )}
+                      <Link href="/contact" className="text-muted-foreground hover:text-foreground transition-colors">Contact</Link>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">

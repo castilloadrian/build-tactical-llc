@@ -80,6 +80,12 @@ export function Navigation({ user }: NavigationProps) {
             </div>
             <div className="border-t" />
             <div className="space-y-1">
+              <Link href="/profile">
+                <Button variant="ghost" className="w-full justify-start" size="sm">
+                  <User className="mr-2 h-4 w-4" />
+                  Profile
+                </Button>
+              </Link>
               {isAdmin && (
                 <Link href="/admin">
                   <Button variant="ghost" className="w-full justify-start" size="sm">
@@ -88,18 +94,6 @@ export function Navigation({ user }: NavigationProps) {
                   </Button>
                 </Link>
               )}
-              <Link href="/profile">
-                <Button variant="ghost" className="w-full justify-start" size="sm">
-                  <User className="mr-2 h-4 w-4" />
-                  Profile
-                </Button>
-              </Link>
-              <Link href="/dashboard">
-                <Button variant="ghost" className="w-full justify-start" size="sm">
-                  <LayoutDashboard className="mr-2 h-4 w-4" />
-                  Dashboard
-                </Button> 
-              </Link>
             </div>
             <div className="border-t" />
             <Button 
