@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export default function LearnMore() {
   return (
-    <div className="max-w-7xl mx-auto px-4 py-24">
+    <div className="max-w-7xl mx-auto px-4 py-12">
       <h1 className="text-4xl font-bold mb-8 text-foreground text-center animate-fade-in-up">
         Learn More About <span className="text-accent">Build Tactical LLC</span>
       </h1>

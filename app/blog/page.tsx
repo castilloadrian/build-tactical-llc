@@ -1,6 +1,6 @@
 export default function Blog() {
   return (
-    <div className="max-w-7xl mx-auto px-4 py-24">
+    <div className="max-w-7xl mx-auto px-4 py-12">
       <h1 className="text-4xl font-bold mb-8 text-foreground text-center animate-fade-in-up">
         Latest <span className="text-accent">Insights</span>
       </h1>

@@ -11,12 +11,12 @@ export default function Pricing() {
   const businessLabel = billing === "monthly" ? "/month" : "/month";
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-24">
+    <div className="max-w-7xl mx-auto px-4 py-12">
       <h1 className="text-5xl font-bold mb-2 text-white text-center">Pricing</h1>
-      <p className="text-lg text-muted-foreground mb-10 text-center">Choose the plan that works for you</p>
+      <p className="text-lg text-muted-foreground mb-8 text-center">Choose the plan that works for you</p>
 
       {/* Toggle for Monthly/Yearly */}
-      <div className="flex justify-center mb-12">
+      <div className="flex justify-center mb-8">
         <div className="inline-flex rounded-md bg-muted p-1">
           <button
             className={`px-4 py-1 rounded-md font-medium focus:outline-none transition-colors ${billing === "monthly" ? "bg-background text-foreground" : "text-muted-foreground"}`}

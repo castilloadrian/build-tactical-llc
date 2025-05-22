@@ -75,14 +75,14 @@ export default function ContractorDirectory() {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-24">
+      <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="text-center">Loading contractors...</div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-24">
+    <div className="max-w-7xl mx-auto px-4 py-12">
       <h1 className="text-4xl font-bold mb-8 text-foreground text-center animate-fade-in-up">
         Contractor <span className="text-accent">Directory</span>
       </h1>

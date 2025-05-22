@@ -68,7 +68,7 @@ export default async function ProfilePage() {
   const userRole = publicUser?.role;
 
   return (
-    <div className="container max-w-7xl py-8 px-4">
+    <div className="container max-w-7xl py-12 px-4">
       <h1 className="text-2xl font-bold mb-6">Profile</h1>
       
       {/* Mobile card view */}
