@@ -3,6 +3,8 @@ import { FormMessage, Message } from "@/components/form-message";
 import { SubmitButton } from "@/components/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { UserPlus } from "lucide-react";
 import Link from "next/link";
 
 export default async function Signup(props: {
@@ -11,43 +13,113 @@ export default async function Signup(props: {
   const searchParams = await props.searchParams;
   if ("message" in searchParams) {
     return (
-      <div className="w-full flex-1 flex items-center h-screen sm:max-w-md justify-center gap-2 p-4">
-        <FormMessage message={searchParams} />
+      <div className="max-w-7xl mx-auto px-4 py-20">
+        <div className="max-w-md mx-auto">
+          <Card className="border-border shadow-lg">
+            <CardContent className="p-8">
+              <FormMessage message={searchParams} />
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <>
-      <form className="flex flex-col min-w-64 max-w-64 mx-auto">
-        <h1 className="text-2xl font-medium">Sign up</h1>
-        <p className="text-sm text text-foreground">
-          Already have an account?{" "}
-          <Link className="text-accent font-medium underline" href="/sign-in">
-            Sign in
-          </Link>
-        </p>
-        <div className="flex flex-col gap-2 [&>input]:mb-3 mt-8">
-          <Label htmlFor="fullName">Full Name</Label>
-          <Input name="fullName" placeholder="John Doe" required />
-          <Label htmlFor="org_proj">Organization or Project</Label>
-          <Input name="org_proj" placeholder="Your organization or project name" />
-          <Label htmlFor="email">Email</Label>
-          <Input name="email" placeholder="you@example.com" required />
-          <Label htmlFor="password">Password</Label>
-          <Input
-            type="password"
-            name="password"
-            placeholder="Your password"
-            minLength={6}
-            required
-          />
-          <SubmitButton formAction={signUpAction as unknown as (formData: FormData) => Promise<void>} pendingText="Signing up...">
-            Sign up
-          </SubmitButton>
-          <FormMessage message={searchParams} />
+    <div className="max-w-7xl mx-auto px-4 py-20">
+      <div className="max-w-md mx-auto">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-foreground">
+            Join <span className="text-accent">Build Tactical</span>
+          </h1>
+          <p className="text-lg text-muted-foreground">
+            Create your account to get started
+          </p>
         </div>
-      </form>
-    </>
+
+        <Card className="border-border shadow-lg">
+          <CardHeader className="text-center pb-4">
+            <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <UserPlus className="h-8 w-8 text-accent" />
+            </div>
+            <CardTitle className="text-2xl">Create Account</CardTitle>
+          </CardHeader>
+          <CardContent className="p-8 pt-0">
+            <form className="space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="fullName" className="text-sm font-medium text-foreground">
+                    Full Name
+                  </Label>
+                  <Input 
+                    name="fullName" 
+                    placeholder="John Doe" 
+                    required 
+                    className="mt-2"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="org_proj" className="text-sm font-medium text-foreground">
+                    Organization or Project
+                  </Label>
+                  <Input 
+                    name="org_proj" 
+                    placeholder="Your organization or project name" 
+                    className="mt-2"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="email" className="text-sm font-medium text-foreground">
+                    Email
+                  </Label>
+                  <Input 
+                    name="email" 
+                    type="email"
+                    placeholder="you@example.com" 
+                    required 
+                    className="mt-2"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="password" className="text-sm font-medium text-foreground">
+                    Password
+                  </Label>
+                  <Input
+                    type="password"
+                    name="password"
+                    placeholder="Your password"
+                    minLength={6}
+                    required
+                    className="mt-2"
+                  />
+                </div>
+              </div>
+
+              <SubmitButton 
+                formAction={signUpAction as unknown as (formData: FormData) => Promise<void>} 
+                pendingText="Creating account..."
+                className="w-full bg-accent hover:bg-accent/90 text-white"
+              >
+                Create Account
+              </SubmitButton>
+              
+              <FormMessage message={searchParams} />
+              
+              <div className="text-center pt-4 border-t border-border">
+                <p className="text-sm text-muted-foreground">
+                  Already have an account?{" "}
+                  <Link className="text-accent font-medium hover:text-accent/80 transition-colors" href="/sign-in">
+                    Sign in
+                  </Link>
+                </p>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }

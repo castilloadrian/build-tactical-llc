@@ -2,8 +2,10 @@
 
 import { createClient } from '@/utils/supabase/client';
 import { useEffect, useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Users, Mail, Briefcase, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useRouter } from 'next/navigation';
 
 interface Contractor {
   id: string;
@@ -24,7 +26,20 @@ export default function ContractorDirectory() {
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [expandedContractor, setExpandedContractor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
   const supabase = createClient();
+
+  // Check authentication on component mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/sign-in');
+        return;
+      }
+    };
+    checkAuth();
+  }, [router, supabase.auth]);
 
   useEffect(() => {
     const fetchContractors = async () => {
@@ -70,99 +85,139 @@ export default function ContractorDirectory() {
   }, []);
 
   const toggleExpand = (contractorId: string) => {
-    setExpandedContractor(expandedContractor === contractorId ? null : contractorId);
+    setExpandedContractor(prevExpanded => prevExpanded === contractorId ? null : contractorId);
   };
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        <div className="text-center">Loading contractors...</div>
+      <div className="max-w-7xl mx-auto px-4 py-20">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Users className="h-8 w-8 text-accent animate-pulse" />
+          </div>
+          <p className="text-lg text-muted-foreground">Loading contractors...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-12">
-      <h1 className="text-4xl font-bold mb-8 text-foreground text-center animate-fade-in-up">
-        Contractor <span className="text-accent">Directory</span>
-      </h1>
-      
-      <div className="grid gap-8 animate-fade-in-up [animation-delay:200ms] opacity-0 [animation-fill-mode:forwards] max-w-4xl mx-auto">
-        <section className="space-y-4 text-center">
-          <h2 className="text-2xl font-semibold text-foreground">Verified Contractors</h2>
-          <p className="text-lg text-muted-foreground">
-            Browse our network of verified contractors. Each profile includes
-            their expertise and current project assignments.
-          </p>
-        </section>
+    <div className="max-w-7xl mx-auto px-4 py-20">
+      {/* Hero Section */}
+      <div className="text-center mb-16 animate-fade-in-up">
+        <h1 className="text-4xl md:text-5xl font-bold mb-6 text-foreground">
+          Contractor <span className="text-accent">Directory</span>
+        </h1>
+        <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+          Browse our network of verified contractors. Each profile includes their expertise, current project assignments, and contact information.
+        </p>
+      </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+
+
+      {/* Contractors Grid */}
+      <div className="animate-fade-in-up [animation-delay:400ms] opacity-0 [animation-fill-mode:forwards]">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 items-start">
           {contractors.map((contractor) => (
-            <div
+            <Card
               key={contractor.id}
-              className="bg-card rounded-lg border border-border p-6 hover:shadow-lg transition-shadow"
+              className="border-border hover:shadow-lg transition-all duration-300 hover:border-accent/20"
             >
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2">
-                    {contractor.full_name || 'Unnamed Contractor'}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {contractor.email || 'No email available'}
-                  </p>
+              <CardHeader className="pb-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Users className="h-6 w-6 text-accent" />
+                      </div>
+                      <div className="min-w-0">
+                        <CardTitle className="text-lg leading-tight">
+                          {contractor.full_name || 'Unnamed Contractor'}
+                        </CardTitle>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Mail className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">{contractor.email || 'No email available'}</span>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => toggleExpand(contractor.id)}
+                    className="h-8 w-8 flex-shrink-0"
+                  >
+                    {expandedContractor === contractor.id ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => toggleExpand(contractor.id)}
-                  className="h-8 w-8"
-                >
-                  {expandedContractor === contractor.id ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
+              </CardHeader>
 
               {expandedContractor === contractor.id && (
-                <div className="mt-4 pt-4 border-t border-border">
-                  <div className="space-y-4">
+                <CardContent className="pt-0">
+                  <div className="space-y-4 border-t border-border pt-4">
                     <div>
-                      <h4 className="text-sm font-medium text-foreground mb-2">Current Projects</h4>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Briefcase className="h-4 w-4 text-accent" />
+                        <h4 className="text-sm font-medium text-foreground">Current Projects</h4>
+                      </div>
                       {contractor.projects && contractor.projects.length > 0 ? (
                         <div className="space-y-3">
                           {contractor.projects.map((project) => (
-                            <div key={project.id} className="bg-muted/50 p-3 rounded-md">
-                              <p className="font-medium">{project.name}</p>
-                              <p className="text-sm text-muted-foreground">{project.description}</p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Status: {project.status || 'Not specified'}
-                              </p>
-                            </div>
+                            <Card key={project.id} className="border-muted">
+                              <CardContent className="p-3">
+                                <p className="font-medium text-sm mb-1">{project.name}</p>
+                                <p className="text-xs text-muted-foreground mb-2">{project.description}</p>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs text-muted-foreground">Status:</span>
+                                  <span className="text-xs bg-accent/10 text-accent px-2 py-1 rounded">
+                                    {project.status || 'Not specified'}
+                                  </span>
+                                </div>
+                              </CardContent>
+                            </Card>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground">No current projects</p>
+                        <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md">
+                          No current projects
+                        </p>
                       )}
                     </div>
+                    
                     {contractor.proposed_org_proj && (
                       <div>
-                        <h4 className="text-sm font-medium text-foreground mb-1">Proposed Organization/Project</h4>
-                        <p className="text-sm text-muted-foreground">{contractor.proposed_org_proj}</p>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Building2 className="h-4 w-4 text-accent" />
+                          <h4 className="text-sm font-medium text-foreground">Organization</h4>
+                        </div>
+                        <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md">
+                          {contractor.proposed_org_proj}
+                        </p>
                       </div>
                     )}
                   </div>
-                </div>
+                </CardContent>
               )}
-            </div>
+            </Card>
           ))}
         </div>
 
         {contractors.length === 0 && (
-          <div className="text-center text-muted-foreground">
-            No contractors found in the directory.
-          </div>
+          <Card className="border-border">
+            <CardContent className="p-12 text-center">
+              <div className="w-16 h-16 bg-muted/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Users className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-medium text-foreground mb-2">No Contractors Found</h3>
+              <p className="text-muted-foreground">
+                No contractors are currently available in the directory.
+              </p>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
