@@ -54,12 +54,10 @@ export default async function RootLayout({
                   {/* Navigation Links - Center */}
                   <div className="flex-1 flex justify-center items-center gap-4">
                     { user && (
-                      <>
-                        <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors font-semibold">Dashboard</Link>
-                        <Link href="/contractor-directory" className="text-muted-foreground hover:text-foreground transition-colors">Contractor Directory</Link>
-                        <Link href="/government-directory" className="text-muted-foreground hover:text-foreground transition-colors">Government Directory</Link>
-                      </>
+                      <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors font-semibold">Dashboard</Link>
                     )}
+                    <Link href="/contractor-directory" className="text-muted-foreground hover:text-foreground transition-colors">Contractor Directory</Link>
+                    <Link href="/government-directory" className="text-muted-foreground hover:text-foreground transition-colors">Government Directory</Link>
                     <Link href="/learn-more" className="text-muted-foreground hover:text-foreground transition-colors">Learn More</Link>
                     <Link href="/blog" className="text-muted-foreground hover:text-foreground transition-colors">Blog</Link>
                     { !user && (

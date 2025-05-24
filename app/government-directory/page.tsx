@@ -21,18 +21,6 @@ export default function GovernmentDirectory() {
   const router = useRouter();
   const supabase = createClient();
 
-  // Check authentication on component mount
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/sign-in');
-        return;
-      }
-    };
-    checkAuth();
-  }, [router, supabase.auth]);
-
   useEffect(() => {
     const fetchOrganizations = async () => {
       try {
