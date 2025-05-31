@@ -144,10 +144,6 @@ export default function GovernmentDirectory() {
                             })}
                           </span>
                         </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Organization ID:</span>
-                          <span className="text-foreground font-mono">#{org.id}</span>
-                        </div>
                       </div>
                     </div>
                   </div>
