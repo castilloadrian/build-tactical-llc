@@ -1,58 +1,158 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BookOpen, Newspaper, Lightbulb } from 'lucide-react';
+import { BookOpen, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { CreateBlogPostModal } from '@/components/create-blog-post-modal';
+import { ViewBlogPostModal } from '@/components/view-blog-post-modal';
+import { createClient } from '@/utils/supabase/client';
+import Image from 'next/image';
+
+interface BlogPost {
+  id: number;
+  title: string;
+  details: string;
+  created_at: string;
+}
+
+interface SupabaseBlogPost {
+  id: number;
+  title: string;
+  details: string;
+  created_at: string;
+}
 
 export default function Blog() {
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function checkRole() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        
+        setIsAdmin(userData?.role === 'Admin');
+      }
+    }
+    
+    checkRole();
+  }, []);
+
+  useEffect(() => {
+    async function fetchPosts() {
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select(`
+          id,
+          title,
+          details,
+          created_at
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching posts:', error);
+        return;
+      }
+
+      setPosts(data as BlogPost[]);
+    }
+
+    fetchPosts();
+  }, []);
+
+  const handlePostCreated = async () => {
+    // Refresh posts after creating a new one
+    const { data: newPosts } = await supabase
+      .from('blog_posts')
+      .select(`
+        id,
+        title,
+        details,
+        created_at
+      `)
+      .order('created_at', { ascending: false });
+
+    setPosts(newPosts as BlogPost[]);
+  };
+
+  const handlePostClick = (post: BlogPost) => {
+    setSelectedPost(post);
+    setIsViewModalOpen(true);
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
-      {/* Hero Section */}
-      <div className="text-center mb-16 animate-fade-in-up">
-        <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-          <BookOpen className="h-8 w-8 text-accent" />
+      <div className="flex justify-between items-center mb-12 border-b pb-6">
+        <div>
+          <h1 className="text-4xl font-bold tracking-tight">Blog Posts</h1>
+          <p className="text-muted-foreground mt-2">Stay up to date with our latest insights and updates</p>
         </div>
-        <h1 className="text-5xl font-bold mb-6 text-foreground">
-          Latest <span className="text-accent">Insights</span>
-        </h1>
-        <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-          Stay informed with expert analysis, industry trends, and best practices in government contracting
-        </p>
+        {isAdmin && (
+          <Button onClick={() => setIsCreateModalOpen(true)} className="gap-2 h-11 px-6">
+            <Plus className="h-4 w-4" />
+            Create Post
+          </Button>
+        )}
       </div>
 
-      {/* Content Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto animate-fade-in-up [animation-delay:200ms] opacity-0 [animation-fill-mode:forwards]">
-        
-        {/* Industry News Card */}
-        <Card className="border-border hover:shadow-lg transition-shadow">
-          <CardHeader>
-            <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center mb-4">
-              <Newspaper className="h-6 w-6 text-accent" />
+      {/* Blog Posts Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        {posts.map((post) => (
+          <Card 
+            key={post.id} 
+            className="border-border hover:shadow-lg transition-all duration-200 overflow-hidden cursor-pointer hover:border-accent/50"
+            onClick={() => handlePostClick(post)}
+          >
+            <div className="relative w-full aspect-[16/9] bg-accent/5">
+              <Image
+                src="/build-tactical-llc-logo.png"
+                alt="Build Tactical LLC Logo"
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-contain p-8"
+                priority
+              />
             </div>
-            <CardTitle className="text-2xl">Industry News</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-lg text-muted-foreground leading-relaxed">
-              Stay informed with the latest updates in government contracting, policy changes,
-              and industry trends. Our expert analysis helps you navigate the complex landscape.
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Best Practices Card */}
-        <Card className="border-border hover:shadow-lg transition-shadow">
-          <CardHeader>
-            <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center mb-4">
-              <Lightbulb className="h-6 w-6 text-accent" />
-            </div>
-            <CardTitle className="text-2xl">Best Practices</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-lg text-muted-foreground leading-relaxed">
-              Discover tips, strategies, and success stories from experienced contractors
-              and government agencies. Learn how to optimize your contracting process.
-            </p>
-          </CardContent>
-        </Card>
-
+            <CardHeader>
+              <CardTitle className="text-2xl line-clamp-2">{post.title}</CardTitle>
+              <div className="text-sm text-muted-foreground">
+                {new Date(post.created_at).toLocaleDateString()}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-lg text-muted-foreground leading-relaxed line-clamp-3">
+                {post.details}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
+
+      <CreateBlogPostModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={handlePostCreated}
+      />
+
+      <ViewBlogPostModal
+        isOpen={isViewModalOpen}
+        onClose={() => {
+          setIsViewModalOpen(false);
+          setSelectedPost(null);
+        }}
+        post={selectedPost}
+      />
     </div>
   );
 } 
