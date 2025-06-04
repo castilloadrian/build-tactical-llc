@@ -7,6 +7,7 @@ import { Plus, Trash2, Upload, Download, RefreshCw, File, Trash, BarChart3, Arro
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TaskList } from "@/components/task-list";
+import { ProjectUpdates } from "@/components/project-updates";
 import { User } from '@supabase/supabase-js';
 import { toast } from "sonner";
 import { ExpensesChart } from "@/components/expenses-chart";
@@ -1110,6 +1111,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           )}
         </CardContent>
       </Card>
+
+      {/* Project Updates Section - Full Width */}
+      <div className="mt-6">
+        <ProjectUpdates projectId={parseInt(projectId)} />
+      </div>
 
       {/* Existing Dialogs */}
       <AlertDialog open={!!fileToDelete} onOpenChange={(open) => !open && setFileToDelete(null)}>

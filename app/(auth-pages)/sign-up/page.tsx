@@ -1,11 +1,11 @@
 import { signUpAction } from "@/app/actions";
-import { FormMessage, Message } from "@/components/form-message";
+import { FormMessage, type Message } from "@/components/form-message";
 import { SubmitButton } from "@/components/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserPlus } from "lucide-react";
-import Link from "next/link";
 
 export default async function Signup(props: {
   searchParams: Promise<Message>;
@@ -81,6 +81,22 @@ export default async function Signup(props: {
                     required 
                     className="mt-2"
                   />
+                </div>
+                
+                <div>
+                  <Label htmlFor="role" className="text-sm font-medium text-foreground">
+                    I am a
+                  </Label>
+                  <select 
+                    name="role" 
+                    id="role"
+                    required 
+                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-2"
+                  >
+                    <option value="">Select your role</option>
+                    <option value="Contractor">Contractor</option>
+                    <option value="Organization">Organization</option>
+                  </select>
                 </div>
                 
                 <div>
