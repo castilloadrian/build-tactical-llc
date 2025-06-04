@@ -60,7 +60,7 @@ export default async function RootLayout({
                     <Link href="/government-directory" className="text-muted-foreground hover:text-foreground transition-colors">Government Directory</Link>
                     <Link href="/learn-more" className="text-muted-foreground hover:text-foreground transition-colors">Learn More</Link>
                     <Link href="/blog" className="text-muted-foreground hover:text-foreground transition-colors">Blog</Link>
-                    { !user && (
+                    { user && (
                       <Link href="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">Pricing</Link>
                     )}
                     <Link href="/contact" className="text-muted-foreground hover:text-foreground transition-colors">Contact</Link>

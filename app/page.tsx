@@ -361,9 +361,9 @@ export default function Home() {
               Join hundreds of contractors and government organizations already using Build Tactical
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/pricing">
+              <Link href="/sign-up">
                 <Button size="lg" className="bg-accent hover:bg-accent/90 text-white shadow-lg hover:shadow-xl transition-all">
-                  View Pricing
+                  Create Account
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
@@ -373,6 +373,9 @@ export default function Home() {
                 </Button>
               </Link>
             </div>
+            <p className="text-sm text-muted-foreground mt-6 max-w-md mx-auto">
+              * Subscriptions available for purchase after account creation
+            </p>
           </div>
         </div>
       </div>
