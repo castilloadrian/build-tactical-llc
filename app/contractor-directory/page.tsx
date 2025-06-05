@@ -39,7 +39,10 @@ export default function ContractorDirectory() {
       try {
         const { data: { user }, error } = await supabase.auth.getUser();
         if (error) {
-          console.error('Auth error:', error);
+          // Only log unexpected auth errors, not the normal "missing session" error
+          if (error.name !== 'AuthSessionMissingError') {
+            console.error('Auth error:', error);
+          }
           setIsAuthenticated(false);
           setAuthChecked(true);
           return;
