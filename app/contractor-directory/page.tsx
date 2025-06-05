@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
 
+// Create a single Supabase client instance
+const supabase = createClient();
+
 interface Contractor {
   id: string;
   full_name: string | null;
@@ -27,18 +30,27 @@ export default function ContractorDirectory() {
   const [expandedContractor, setExpandedContractor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
 
   // Check authentication status
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const { data: { user }, error } = await supabase.auth.getUser();
-        if (error) throw error;
-        setIsAuthenticated(!!user);
+        if (error) {
+          console.error('Auth error:', error);
+          setIsAuthenticated(false);
+          setAuthChecked(true);
+          return;
+        }
+        const isAuthed = !!user;
+        setIsAuthenticated(isAuthed);
+        setAuthChecked(true);
       } catch (error) {
+        console.error('Auth check failed:', error);
         setIsAuthenticated(false);
+        setAuthChecked(true);
       }
     };
 
@@ -46,8 +58,14 @@ export default function ContractorDirectory() {
     checkAuth();
 
     // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setIsAuthenticated(!!session?.user);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const isAuthed = !!session?.user;
+      setIsAuthenticated(isAuthed);
+      
+      // If we just logged in, fetch the data again
+      if (event === 'SIGNED_IN') {
+        await fetchContractors(isAuthed);
+      }
     });
 
     return () => {
@@ -56,62 +74,68 @@ export default function ContractorDirectory() {
   }, []);
 
   // Fetch contractors data
-  useEffect(() => {
-    const fetchContractors = async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('users')
-          .select(`
-            id,
-            full_name,
-            role,
-            ${isAuthenticated ? `
-              email,
-              proposed_org_proj,
-              projects:"user-project"(
-                project:projects(*)
+  const fetchContractors = async (isAuthed: boolean) => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select(`
+          id,
+          full_name,
+          role,
+          ${isAuthed ? `
+            email,
+            proposed_org_proj,
+            projects:"user-project"(
+              project:projects(*)
+            )
+          ` : `
+            projects:"user-project"(
+              project:projects(
+                id,
+                name
               )
-            ` : `
-              projects:"user-project"(
-                project:projects(
-                  id,
-                  name
-                )
-              )
-            `}
-          `)
-          .eq('role', 'Contractor')
-          .order('full_name');
+            )
+          `}
+        `)
+        .eq('role', 'Contractor')
+        .order('full_name');
 
-        if (error) throw error;
-
-        // Transform the data to match our interface
-        const transformedContractors = data?.map((contractor: any) => ({
-          id: contractor.id,
-          full_name: contractor.full_name,
-          email: isAuthenticated ? contractor.email : null,
-          role: contractor.role,
-          proposed_org_proj: isAuthenticated ? contractor.proposed_org_proj : null,
-          projects: contractor.projects?.map((proj: any) => ({
-            id: proj.project.id,
-            name: proj.project.name,
-            description: isAuthenticated ? proj.project.description : null,
-            status: isAuthenticated ? proj.project.status : null,
-            created_at: isAuthenticated ? proj.project.created_at : null
-          }))
-        })) || [];
-
-        setContractors(transformedContractors);
-      } catch (error) {
+      if (error) {
         console.error('Error fetching contractors:', error);
-      } finally {
-        setLoading(false);
+        throw error;
       }
-    };
 
-    fetchContractors();
-  }, [isAuthenticated]);
+      // Transform the data to match our interface
+      const transformedContractors = data?.map((contractor: any) => ({
+        id: contractor.id,
+        full_name: contractor.full_name,
+        email: isAuthed ? contractor.email : null,
+        role: contractor.role,
+        proposed_org_proj: isAuthed ? contractor.proposed_org_proj : null,
+        projects: contractor.projects?.map((proj: any) => ({
+          id: proj.project.id,
+          name: proj.project.name,
+          description: isAuthed ? proj.project.description : null,
+          status: isAuthed ? proj.project.status : null,
+          created_at: isAuthed ? proj.project.created_at : null
+        }))
+      })) || [];
+
+      setContractors(transformedContractors);
+    } catch (error) {
+      console.error('Error in fetchContractors:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial data fetch and refetch on auth change
+  useEffect(() => {
+    if (authChecked) {
+      fetchContractors(isAuthenticated);
+    }
+  }, [isAuthenticated, authChecked]);
 
   const toggleExpand = (contractorId: string) => {
     if (!isAuthenticated) {
@@ -121,7 +145,7 @@ export default function ContractorDirectory() {
     setExpandedContractor(prevExpanded => prevExpanded === contractorId ? null : contractorId);
   };
 
-  if (loading) {
+  if (loading || !authChecked) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-20">
         <div className="text-center">
@@ -180,7 +204,7 @@ export default function ContractorDirectory() {
                     <div className={`flex items-center gap-2 text-sm text-muted-foreground ${!isAuthenticated ? 'blur-sm' : ''}`}>
                       <Mail className="h-4 w-4 flex-shrink-0" />
                       <span className="truncate">
-                        {isAuthenticated ? (contractor.email || 'No email available') : '••••••••@••••••••'}
+                        {isAuthenticated ? (contractor.email || 'No email provided') : '••••••••@••••••••'}
                       </span>
                     </div>
                   </div>
