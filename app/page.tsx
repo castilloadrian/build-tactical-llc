@@ -148,17 +148,17 @@ export default function Home() {
             <div className="animate-fade-in-up">
               <div className="inline-flex items-center px-3 py-1 rounded-full bg-accent/10 text-accent text-sm font-medium mb-6">
                 <Target className="w-4 h-4 mr-2" />
-                Connecting Government & Industry
+                Connecting Organizations & Industry
               </div>
               <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-4 md:mb-6 text-foreground leading-tight">
                 Bridging Contractors and{" "}
                 <span className="text-accent bg-gradient-to-r from-accent to-accent/80 bg-clip-text text-transparent">
-                  Local Government Projects
+                  Local Organization Projects
                 </span>
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground mb-6 md:mb-8 leading-relaxed">
                 Build Tactical LLC helps you make sense of your data with powerful analytics,
-                real-time synchronization of data, and offers directories of contractors and government organizations.
+                real-time synchronization of data, and offers directories of contractors and organizations.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link href="/learn-more">
@@ -197,7 +197,7 @@ export default function Home() {
                 <div className="text-3xl md:text-4xl font-bold text-accent mb-2">
                   <AnimatedCounter end={50} suffix="+" />
                 </div>
-                <div className="text-sm text-muted-foreground">Government Partners</div>
+                <div className="text-sm text-muted-foreground">Organization Partners</div>
               </div>
               <div className="animate-fade-in-up [animation-delay:500ms] opacity-0 [animation-fill-mode:forwards]">
                 <div className="text-3xl md:text-4xl font-bold text-accent mb-2">
@@ -248,8 +248,8 @@ export default function Home() {
               },
               {
                 icon: Globe,
-                title: "Government Portal",
-                description: "Direct connection to local government projects, requirements, and bidding opportunities.",
+                title: "Organization Portal",
+                description: "Direct connection to local organization projects, requirements, and bidding opportunities.",
                 delay: "1100ms"
               },
               {
@@ -261,7 +261,7 @@ export default function Home() {
               {
                 icon: Zap,
                 title: "Reliable Data",
-                description: "Real time data managed by the government organizations and contractors",
+                description: "Real time data managed by the organizations and contractors",
                 delay: "1300ms"
               }
             ].map((feature, index) => (
@@ -358,7 +358,7 @@ export default function Home() {
               Ready to Transform Your Project Management?
             </h2>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Join hundreds of contractors and government organizations already using Build Tactical
+              Join hundreds of contractors and organizations already using Build Tactical
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/pricing">

@@ -14,7 +14,7 @@ interface Organization {
   created_at: string;
 }
 
-export default function GovernmentDirectory() {
+export default function OrganizationDirectory() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [expandedOrg, setExpandedOrg] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,14 +63,12 @@ export default function GovernmentDirectory() {
       {/* Hero Section */}
       <div className="text-center mb-16 animate-fade-in-up">
         <h1 className="text-4xl md:text-5xl font-bold mb-6 text-foreground">
-          Government <span className="text-accent">Directory</span>
+          Organization <span className="text-accent">Directory</span>
         </h1>
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-          Explore our network of government organizations. Each profile includes detailed information about their services, expertise, and project opportunities.
+          Explore our network of organizations. Each profile includes detailed information about their services, expertise, and project opportunities.
         </p>
       </div>
-
-
 
       {/* Organizations Grid */}
       <div className="animate-fade-in-up [animation-delay:400ms] opacity-0 [animation-fill-mode:forwards]">
@@ -161,7 +159,7 @@ export default function GovernmentDirectory() {
               </div>
               <h3 className="text-lg font-medium text-foreground mb-2">No Organizations Found</h3>
               <p className="text-muted-foreground">
-                No government organizations are currently available in the directory.
+                No organizations are currently available in the directory.
               </p>
             </CardContent>
           </Card>

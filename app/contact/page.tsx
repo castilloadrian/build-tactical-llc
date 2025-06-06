@@ -192,7 +192,7 @@ export default function Contact() {
                 <div>
                   <h3 className="font-semibold text-foreground">Location</h3>
                   <p className="text-muted-foreground">McAllen, TX</p>
-                  <p className="text-sm text-muted-foreground">Serving government contractors nationwide</p>
+                  <p className="text-sm text-muted-foreground">Serving contractors nationwide</p>
                 </div>
               </div>
             </CardContent>

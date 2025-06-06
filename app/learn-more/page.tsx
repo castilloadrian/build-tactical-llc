@@ -12,7 +12,7 @@ export default function LearnMore() {
           About <span className="text-accent">Build Tactical LLC</span>
         </h1>
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-          We're transforming how contractors and government organizations connect, collaborate, and succeed together through innovative technology solutions.
+          We're transforming how contractors and organizations connect, collaborate, and succeed together through innovative technology solutions.
         </p>
       </div>
 
@@ -26,7 +26,7 @@ export default function LearnMore() {
                 <h2 className="text-3xl font-bold text-foreground">Our Mission</h2>
               </div>
               <p className="text-lg text-muted-foreground leading-relaxed">
-                To bridge the gap between skilled contractors and government organizations by providing comprehensive directories, streamlined project management, and data-driven insights that foster successful partnerships.
+                To bridge the gap between skilled contractors and organizations by providing comprehensive directories, streamlined project management, and data-driven insights that foster successful partnerships.
               </p>
             </div>
             <div className="flex-shrink-0">
@@ -74,15 +74,15 @@ export default function LearnMore() {
             </CardContent>
           </Card>
 
-          {/* Government Directory Card */}
+          {/* Organization Directory Card */}
           <Card className="border-border hover:shadow-lg transition-shadow">
             <CardHeader>
               <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center mb-4">
                 <Building2 className="h-6 w-6 text-accent" />
               </div>
-              <CardTitle className="text-xl">Government Directory</CardTitle>
+              <CardTitle className="text-xl">Organization Directory</CardTitle>
               <CardDescription>
-                Explore government organizations and their projects and opportunities.
+                Explore organizations and their projects and opportunities.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -143,7 +143,7 @@ export default function LearnMore() {
             Ready to Get Started?
           </h2>
           <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Join contractors and government organizations who are already using Build Tactical LLC to streamline their project partnerships.
+            Join contractors and organizations who are already using Build Tactical LLC to streamline their project partnerships.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/pricing">
