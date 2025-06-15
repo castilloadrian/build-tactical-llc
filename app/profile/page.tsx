@@ -470,6 +470,19 @@ export default function ProfilePage() {
     }
   };
 
+  // Function to format client type names with special cases
+  const formatClientTypeName = (key: string) => {
+    const specialCases: Record<string, string> = {
+      'is_joc': 'Job Order Contracting',
+      'is_local_government': 'Local Government',
+      'is_federal_government': 'Federal Government',
+      'is_athletic_facilities': 'Athletic Facilities',
+      'is_military_facilities': 'Military Facilities'
+    };
+    
+    return specialCases[key] || key.replace('is_', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
   // Add a function to render client types
   const renderClientTypes = () => {
     try {
@@ -496,7 +509,7 @@ export default function ProfilePage() {
                     className="rounded border-primary/20"
                   />
                   <span className="text-sm">
-                    {key.replace('is_', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    {formatClientTypeName(key)}
                   </span>
                 </label>
               ))}
@@ -509,7 +522,7 @@ export default function ProfilePage() {
                     .filter(([_, value]) => value)
                     .map(([key]) => (
                       <li key={key}>
-                        {key.replace('is_', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        {formatClientTypeName(key)}
                       </li>
                     ))}
                 </ul>
