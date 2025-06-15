@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, Users, Mail, Briefcase, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
 
 // Create a single Supabase client instance
@@ -16,6 +17,7 @@ interface Contractor {
   email: string | null;
   role: string | null;
   proposed_org_proj: string | null;
+  profile_picture_url: string | null;
   projects?: {
     id: number;
     name: string | null;
@@ -86,6 +88,7 @@ export default function ContractorDirectory() {
           id,
           full_name,
           role,
+          profile_picture_url,
           ${isAuthed ? `
             email,
             proposed_org_proj,
@@ -116,6 +119,7 @@ export default function ContractorDirectory() {
         email: isAuthed ? contractor.email : null,
         role: contractor.role,
         proposed_org_proj: isAuthed ? contractor.proposed_org_proj : null,
+        profile_picture_url: contractor.profile_picture_url,
         projects: contractor.projects?.map((proj: any) => ({
           id: proj.project.id,
           name: proj.project.name,
@@ -195,9 +199,15 @@ export default function ContractorDirectory() {
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Users className="h-6 w-6 text-accent" />
-                      </div>
+                      <Avatar className="h-12 w-12 flex-shrink-0">
+                        <AvatarImage 
+                          src={contractor.profile_picture_url || undefined} 
+                          alt={`${contractor.full_name || 'Contractor'} profile picture`} 
+                        />
+                        <AvatarFallback className="bg-accent/10 text-accent">
+                          {contractor.full_name?.charAt(0) || <Users className="h-6 w-6" />}
+                        </AvatarFallback>
+                      </Avatar>
                       <div className="min-w-0">
                         <CardTitle className="text-lg leading-tight">
                           {contractor.full_name || 'Unnamed Contractor'}
