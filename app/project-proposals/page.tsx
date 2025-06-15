@@ -73,19 +73,22 @@ export default function ProjectProposalsPage() {
 
       setPublicUser(publicUserData);
 
-      // Fetch real proposals from database
-      await fetchProposals(user.id);
+      // Fetch real proposals from database - pass publicUserData to avoid race condition
+      await fetchProposals(user.id, publicUserData);
     };
 
     fetchData();
   }, []);
 
-  const fetchProposals = async (userId: string) => {
+  const fetchProposals = async (userId: string, userRole?: any) => {
     try {
       let data, error;
       let orgUserIds: string[] = []; // Track org user IDs for type determination
       
-      if (publicUser?.role === 'Admin') {
+      // Use passed userRole or fallback to state
+      const currentUser = userRole || publicUser;
+      
+      if (currentUser?.role === 'Admin') {
         // Admins see ALL proposals
         const result = await supabase
           .from('proposals')
@@ -99,7 +102,8 @@ export default function ProjectProposalsPage() {
         
         data = result.data;
         error = result.error;
-      } else if (publicUser?.role === 'Org Owner') {
+        
+      } else if (currentUser?.role === 'Org Owner') {
         // Org Owners see ALL proposals sent by users from their organization AND contractor-to-contractor proposals tagged under their organization
         const { data: userOrgs, error: orgError } = await supabase
           .from('user-org')
@@ -160,7 +164,7 @@ export default function ProjectProposalsPage() {
         // Determine if proposal is outgoing or incoming based on user role
         let proposalType: 'outgoing' | 'incoming';
         
-        if (publicUser?.role === 'Org Owner') {
+        if (currentUser?.role === 'Org Owner') {
           // For org owners, use a simpler and more reliable approach:
           // 1. If sender is from our organization → "Sent Proposals" 
           // 2. If sender is NOT from our organization but org is tagged → "Tagged Proposals"
@@ -195,6 +199,7 @@ export default function ProjectProposalsPage() {
       }) || [];
 
       setProposals(formattedProposals);
+      
     } catch (error) {
       console.error('Error fetching proposals:', error);
     }
@@ -304,7 +309,7 @@ export default function ProjectProposalsPage() {
       return activeTab === 'outgoing' ? proposal.type === 'outgoing' : proposal.type === 'incoming';
     }
   });
-
+  
   const toggleExpanded = (proposalId: string) => {
     setExpandedProposal(expandedProposal === proposalId ? null : proposalId);
   };
