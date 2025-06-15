@@ -441,7 +441,20 @@ export default function ProjectProposalsPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className={`grid gap-2 text-sm ${publicUser?.role === 'Admin' ? 'grid-cols-2' : 'grid-cols-2'}`}>
+                {/* Show From/To for Admins */}
+                {publicUser?.role === 'Admin' && (
+                  <>
+                    <div>
+                      <span className="font-medium text-primary">From:</span>
+                      <p className="text-muted-foreground truncate">{proposal.sender_name}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-primary">To:</span>
+                      <p className="text-muted-foreground truncate">{proposal.receiver_name}</p>
+                    </div>
+                  </>
+                )}
                 <div>
                   <span className="font-medium text-primary">Organization:</span>
                   <p className="text-muted-foreground truncate">{proposal.organization_name}</p>
@@ -518,34 +531,99 @@ export default function ProjectProposalsPage() {
 
       {/* Desktop view */}
       <div className="hidden md:block space-y-3">
+        {/* Header for Admin view */}
+        {publicUser?.role === 'Admin' && filteredProposals.length > 0 && (
+          <div className="grid grid-cols-7 gap-4 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border">
+            <div>Title</div>
+            <div>From</div>
+            <div>To</div>
+            <div>Organization</div>
+            <div>Amount</div>
+            <div>Status</div>
+            <div>Date</div>
+          </div>
+        )}
+        
+        {/* Header for non-Admin view */}
+        {publicUser?.role !== 'Admin' && filteredProposals.length > 0 && (
+          <div className="grid grid-cols-5 gap-4 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border">
+            <div>Title</div>
+            <div>Organization</div>
+            <div>Amount</div>
+            <div>Status</div>
+            <div>Date</div>
+          </div>
+        )}
+        
         {filteredProposals.map((proposal) => (
           <Card key={proposal.id} className="border-border hover:bg-primary/5 transition-colors cursor-pointer min-h-[80px]" onClick={() => toggleExpanded(proposal.id.toString())}>
             <CardContent className="p-4">
-              <div className="grid grid-cols-5 gap-4 items-center h-12">
-                <div className="min-w-0">
-                  <div className="text-sm font-medium text-foreground truncate">{proposal.title}</div>
-                </div>
-                <div className="text-sm text-foreground truncate">{proposal.organization_name}</div>
-                <div className="text-sm text-foreground">${proposal.budget?.toLocaleString()}</div>
-                <div>
-                  <Badge className={getStatusColor(proposal.status)}>
-                    <div className="flex items-center gap-1">
-                      {getStatusIcon(proposal.status)}
-                      {proposal.status}
-                    </div>
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">
-                    {new Date(proposal.created_at).toLocaleDateString()}
+              {/* Admin view with From/To columns */}
+              {publicUser?.role === 'Admin' ? (
+                <div className="grid grid-cols-7 gap-4 items-center h-12">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-foreground truncate">{proposal.title}</div>
                   </div>
-                  {expandedProposal === proposal.id.toString() ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  <div className="text-sm text-foreground truncate">{proposal.sender_name}</div>
+                  <div className="text-sm text-foreground truncate">{proposal.receiver_name}</div>
+                  <div className="text-sm text-foreground truncate">{proposal.organization_name}</div>
+                  <div className="text-sm text-foreground">${proposal.budget?.toLocaleString()}</div>
+                  <div>
+                    <Badge className={getStatusColor(proposal.status)}>
+                      <div className="flex items-center gap-1">
+                        {getStatusIcon(proposal.status)}
+                        {proposal.status}
+                      </div>
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-muted-foreground">
+                      {new Date(proposal.created_at).toLocaleDateString()}
+                    </div>
+                    {expandedProposal === proposal.id.toString() ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                /* Non-admin view */
+                <div className="grid grid-cols-5 gap-4 items-center h-12">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-foreground truncate">{proposal.title}</div>
+                  </div>
+                  <div className="text-sm text-foreground truncate">{proposal.organization_name}</div>
+                  <div className="text-sm text-foreground">${proposal.budget?.toLocaleString()}</div>
+                  <div>
+                    <Badge className={getStatusColor(proposal.status)}>
+                      <div className="flex items-center gap-1">
+                        {getStatusIcon(proposal.status)}
+                        {proposal.status}
+                      </div>
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-muted-foreground">
+                      {new Date(proposal.created_at).toLocaleDateString()}
+                    </div>
+                    {expandedProposal === proposal.id.toString() ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </div>
+                </div>
+              )}
               
               {/* Expanded content */}
               {expandedProposal === proposal.id.toString() && (
                 <div className="mt-4 pt-4 border-t border-border space-y-4">
+                  {/* Show From/To info for Admins in expanded view */}
+                  {publicUser?.role === 'Admin' && (
+                    <div className="grid grid-cols-2 gap-4 p-3 bg-muted/30 rounded-md">
+                      <div>
+                        <span className="text-xs font-medium text-primary uppercase tracking-wider">Initiated By</span>
+                        <p className="text-sm text-foreground font-medium">{proposal.sender_name}</p>
+                      </div>
+                      <div>
+                        <span className="text-xs font-medium text-primary uppercase tracking-wider">Intended For</span>
+                        <p className="text-sm text-foreground font-medium">{proposal.receiver_name}</p>
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <h4 className="font-medium text-primary mb-2">Project Title</h4>
                     <p className="text-sm text-foreground font-medium mb-4">{proposal.title}</p>
