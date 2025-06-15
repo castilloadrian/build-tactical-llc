@@ -13,6 +13,7 @@ interface Organization {
   name: string;
   description: string | null;
   created_at: string;
+  organization_picture_url: string | null;
 }
 
 interface ContractorTrades {
@@ -123,6 +124,11 @@ export default function ProfilePage() {
   const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
   const [isUploadingPicture, setIsUploadingPicture] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  
+  // Organization picture states
+  const [selectedOrgForPicture, setSelectedOrgForPicture] = useState<Organization | null>(null);
+  const [isUploadingOrgPicture, setIsUploadingOrgPicture] = useState(false);
+  const [orgPreviewUrl, setOrgPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -181,7 +187,8 @@ export default function ProfilePage() {
               id,
               name,
               description,
-              created_at
+              created_at,
+              organization_picture_url
             )
           ),
           user_projects:"user-project"(
@@ -712,6 +719,133 @@ export default function ProfilePage() {
     }
   };
 
+  // Organization picture functions
+  const handleOrganizationPictureUpload = async (event: React.ChangeEvent<HTMLInputElement>, organization: Organization) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB');
+      return;
+    }
+
+    setIsUploadingOrgPicture(true);
+    setSelectedOrgForPicture(organization);
+    const supabase = createClient();
+
+    try {
+      // Create preview URL
+      const preview = URL.createObjectURL(file);
+      setOrgPreviewUrl(preview);
+
+      // Delete old organization picture if it exists
+      if (organization.organization_picture_url) {
+        const oldFilename = organization.organization_picture_url.split('/').pop();
+        if (oldFilename) {
+          await supabase.storage
+            .from('organization-pictures')
+            .remove([`${organization.id}/${oldFilename}`]);
+        }
+      }
+
+      // Upload new organization picture
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${organization.id}/org-${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('organization-pictures')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('organization-pictures')
+        .getPublicUrl(fileName);
+
+      // Update organization record
+      const { error: updateError } = await supabase
+        .from('organizations')
+        .update({ organization_picture_url: publicUrl })
+        .eq('id', organization.id);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setOrganizations(prev => 
+        prev.map(org => 
+          org.id === organization.id 
+            ? { ...org, organization_picture_url: publicUrl }
+            : org
+        )
+      );
+
+      setOrgPreviewUrl(null);
+      setSelectedOrgForPicture(null);
+      toast.success('Organization picture updated successfully');
+
+    } catch (error) {
+      console.error('Error uploading organization picture:', error);
+      toast.error('Failed to upload organization picture');
+      setOrgPreviewUrl(null);
+      setSelectedOrgForPicture(null);
+    } finally {
+      setIsUploadingOrgPicture(false);
+    }
+  };
+
+  const handleRemoveOrganizationPicture = async (organization: Organization) => {
+    if (!organization.organization_picture_url || !user) return;
+
+    setIsUploadingOrgPicture(true);
+    setSelectedOrgForPicture(organization);
+    const supabase = createClient();
+
+    try {
+      // Delete from storage
+      const filename = organization.organization_picture_url.split('/').pop();
+      if (filename) {
+        await supabase.storage
+          .from('organization-pictures')
+          .remove([`${organization.id}/${filename}`]);
+      }
+
+      // Update organization record
+      const { error: updateError } = await supabase
+        .from('organizations')
+        .update({ organization_picture_url: null })
+        .eq('id', organization.id);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setOrganizations(prev => 
+        prev.map(org => 
+          org.id === organization.id 
+            ? { ...org, organization_picture_url: null }
+            : org
+        )
+      );
+
+      setSelectedOrgForPicture(null);
+      toast.success('Organization picture removed successfully');
+
+    } catch (error) {
+      console.error('Error removing organization picture:', error);
+      toast.error('Failed to remove organization picture');
+      setSelectedOrgForPicture(null);
+    } finally {
+      setIsUploadingOrgPicture(false);
+    }
+  };
+
   if (isLoading) {
     return <div className="container max-w-7xl py-12 px-4">Loading...</div>;
   }
@@ -1136,9 +1270,64 @@ export default function ProfilePage() {
               {organizations.map((org: Organization) => (
                 <div key={org.id} className="bg-background p-6 rounded-lg border border-primary/20 hover:bg-primary/5">
                   <div className="flex items-center gap-3 mb-4">
-                    <Building2 className="h-5 w-5 text-primary" />
-                    <h3 className="text-lg font-semibold">{org.name}</h3>
+                    <Avatar className="h-12 w-12 flex-shrink-0">
+                      <AvatarImage 
+                        src={
+                          selectedOrgForPicture?.id === org.id && orgPreviewUrl 
+                            ? orgPreviewUrl 
+                            : org.organization_picture_url || undefined
+                        } 
+                        alt={`${org.name} organization picture`} 
+                      />
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {org.name?.charAt(0) || <Building2 className="h-6 w-6" />}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-semibold">{org.name}</h3>
+                    </div>
                   </div>
+                  
+                  {/* Organization Picture Upload (Admin/Org Owner only) */}
+                  {(publicUser?.role === 'Admin' || publicUser?.role === 'Org Owner') && (
+                    <div className="mb-4 p-3 bg-muted/30 rounded-md">
+                      <p className="text-xs text-muted-foreground mb-2">Organization Picture</p>
+                      <div className="flex items-center gap-2">
+                        <div className="relative">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleOrganizationPictureUpload(e, org)}
+                            disabled={isUploadingOrgPicture && selectedOrgForPicture?.id === org.id}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={isUploadingOrgPicture && selectedOrgForPicture?.id === org.id}
+                            className="text-xs h-7 px-2"
+                          >
+                            <Upload className="h-3 w-3 mr-1" />
+                            {isUploadingOrgPicture && selectedOrgForPicture?.id === org.id ? 'Uploading...' : 'Upload'}
+                          </Button>
+                        </div>
+                        
+                        {org.organization_picture_url && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRemoveOrganizationPicture(org)}
+                            disabled={isUploadingOrgPicture && selectedOrgForPicture?.id === org.id}
+                            className="text-xs h-7 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Remove
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
                   {org.description && (
                     <p className="text-sm text-muted-foreground mb-4">{org.description}</p>
                   )}

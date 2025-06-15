@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, Building2, Calendar, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
 
 interface Organization {
@@ -12,6 +13,7 @@ interface Organization {
   name: string | null;
   description: string | null;
   created_at: string;
+  organization_picture_url: string | null;
 }
 
 export default function OrganizationDirectory() {
@@ -82,9 +84,15 @@ export default function OrganizationDirectory() {
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Building2 className="h-6 w-6 text-accent" />
-                      </div>
+                      <Avatar className="h-12 w-12 flex-shrink-0">
+                        <AvatarImage 
+                          src={org.organization_picture_url || undefined} 
+                          alt={`${org.name || 'Organization'} picture`} 
+                        />
+                        <AvatarFallback className="bg-accent/10 text-accent">
+                          {org.name?.charAt(0) || <Building2 className="h-6 w-6" />}
+                        </AvatarFallback>
+                      </Avatar>
                       <div className="min-w-0">
                         <CardTitle className="text-lg leading-tight">
                           {org.name || 'Unnamed Organization'}
