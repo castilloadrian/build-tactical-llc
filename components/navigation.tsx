@@ -20,20 +20,22 @@ interface NavigationProps {
 
 export function Navigation({ user }: NavigationProps) {
   const [isAdmin, setIsAdmin] = useState(false);
+  const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
   const supabase = createClientComponentClient();
 
   useEffect(() => {
-    async function checkRole() {
+    async function fetchUserData() {
       const { data: userData } = await supabase
         .from('users')
-        .select('role')
+        .select('role, profile_picture_url')
         .eq('id', user?.id)
         .single();
       
       setIsAdmin(userData?.role === 'Admin');
+      setProfilePictureUrl(userData?.profile_picture_url);
     }
     
-    if (user) checkRole();
+    if (user) fetchUserData();
   }, [user]);
 
   if (!user) {
@@ -57,8 +59,13 @@ export function Navigation({ user }: NavigationProps) {
         <PopoverTrigger asChild>
           <Button variant="ghost" className="relative h-8 w-8 rounded-full">
             <Avatar className="h-8 w-8">
-              <AvatarImage src="/build-tactical-llc-logo.png" alt="Build Tactical Logo" />
-              <AvatarFallback>BT</AvatarFallback>
+              <AvatarImage 
+                src={profilePictureUrl || "/build-tactical-llc-logo.png"} 
+                alt={profilePictureUrl ? "Profile Picture" : "Build Tactical Logo"} 
+              />
+              <AvatarFallback>
+                {profilePictureUrl ? user.user_metadata.full_name?.charAt(0) || 'U' : 'BT'}
+              </AvatarFallback>
             </Avatar>
           </Button>
         </PopoverTrigger>
@@ -66,8 +73,13 @@ export function Navigation({ user }: NavigationProps) {
           <div className="space-y-4">
             <div className="flex items-center gap-2 p-2">
               <Avatar className="h-8 w-8">
-                <AvatarImage src="/build-tactical-llc-logo.png" alt="Build Tactical Logo" />
-                <AvatarFallback>BT</AvatarFallback>
+                <AvatarImage 
+                  src={profilePictureUrl || "/build-tactical-llc-logo.png"} 
+                  alt={profilePictureUrl ? "Profile Picture" : "Build Tactical Logo"} 
+                />
+                <AvatarFallback>
+                  {profilePictureUrl ? user.user_metadata.full_name?.charAt(0) || 'U' : 'BT'}
+                </AvatarFallback>
               </Avatar>
               <div className="space-y-1">
                 <p className="text-sm font-medium leading-none">

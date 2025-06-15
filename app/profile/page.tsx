@@ -2,8 +2,11 @@
 import { createClient } from '@/utils/supabase/client';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Building2, Edit2, Save, X } from 'lucide-react';
+import { Building2, Edit2, Save, X, Upload, User, Trash2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { toast } from 'sonner';
+import Image from 'next/image';
 
 interface Organization {
   id: number;
@@ -115,6 +118,11 @@ export default function ProfilePage() {
   const [newCoop, setNewCoop] = useState('');
   const [newCert, setNewCert] = useState('');
   const [newOtherTrade, setNewOtherTrade] = useState('');
+  
+  // Profile picture states
+  const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
+  const [isUploadingPicture, setIsUploadingPicture] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -137,6 +145,7 @@ export default function ProfilePage() {
           website,
           con_coops,
           con_certs,
+          profile_picture_url,
           contractor_trades (
             is_ge,
             is_architect,
@@ -193,6 +202,7 @@ export default function ProfilePage() {
         setPublicUser(publicUser);
         setOrganizations(publicUser.user_orgs?.map((uo: UserOrg) => uo.organization) || []);
         setProjects(publicUser.user_projects?.map((up: UserProject) => up.project) || []);
+        setProfilePictureUrl(publicUser.profile_picture_url);
         
         // Initialize edit states with current values
         setEditedCompany({
@@ -597,6 +607,111 @@ export default function ProfilePage() {
     }));
   };
 
+  // Profile picture functions
+  const handleProfilePictureUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB');
+      return;
+    }
+
+    setIsUploadingPicture(true);
+    const supabase = createClient();
+
+    try {
+      // Create preview URL
+      const preview = URL.createObjectURL(file);
+      setPreviewUrl(preview);
+
+      // Delete old profile picture if it exists
+      if (profilePictureUrl) {
+        const oldFilename = profilePictureUrl.split('/').pop();
+        if (oldFilename) {
+          await supabase.storage
+            .from('profile-pictures')
+            .remove([`${user.id}/${oldFilename}`]);
+        }
+      }
+
+      // Upload new profile picture
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/profile-${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('profile-pictures')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('profile-pictures')
+        .getPublicUrl(fileName);
+
+      // Update user record
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ profile_picture_url: publicUrl })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      setProfilePictureUrl(publicUrl);
+      setPreviewUrl(null);
+      toast.success('Profile picture updated successfully');
+
+    } catch (error) {
+      console.error('Error uploading profile picture:', error);
+      toast.error('Failed to upload profile picture');
+      setPreviewUrl(null);
+    } finally {
+      setIsUploadingPicture(false);
+    }
+  };
+
+  const handleRemoveProfilePicture = async () => {
+    if (!profilePictureUrl || !user) return;
+
+    setIsUploadingPicture(true);
+    const supabase = createClient();
+
+    try {
+      // Delete from storage
+      const filename = profilePictureUrl.split('/').pop();
+      if (filename) {
+        await supabase.storage
+          .from('profile-pictures')
+          .remove([`${user.id}/${filename}`]);
+      }
+
+      // Update user record
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ profile_picture_url: null })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      setProfilePictureUrl(null);
+      toast.success('Profile picture removed successfully');
+
+    } catch (error) {
+      console.error('Error removing profile picture:', error);
+      toast.error('Failed to remove profile picture');
+    } finally {
+      setIsUploadingPicture(false);
+    }
+  };
+
   if (isLoading) {
     return <div className="container max-w-7xl py-12 px-4">Loading...</div>;
   }
@@ -653,6 +768,77 @@ export default function ProfilePage() {
             </tr>
           </tbody>
         </table>
+      </div>
+
+      {/* Profile Picture Section */}
+      <div className="mb-8">
+        <h2 className="text-xl font-bold mb-4">Profile Picture</h2>
+        <div className="bg-background p-6 rounded-lg border border-primary/20 hover:bg-primary/5">
+          <div className="flex items-center gap-6">
+            {/* Current Profile Picture */}
+            <div className="flex-shrink-0">
+              <Avatar className="h-24 w-24">
+                <AvatarImage 
+                  src={previewUrl || profilePictureUrl || undefined} 
+                  alt="Profile Picture" 
+                />
+                <AvatarFallback className="text-2xl">
+                  {user.user_metadata.full_name?.charAt(0) || 'U'}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+
+            {/* Upload Controls */}
+            <div className="flex-1">
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Upload a profile picture to personalize your account. This will be displayed in the navigation bar.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Supported formats: JPEG, PNG, WebP, GIF. Maximum size: 5MB.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {/* Upload Button */}
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleProfilePictureUpload}
+                      disabled={isUploadingPicture}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={isUploadingPicture}
+                      className="flex items-center gap-2"
+                    >
+                      <Upload className="h-4 w-4" />
+                      {isUploadingPicture ? 'Uploading...' : 'Upload Picture'}
+                    </Button>
+                  </div>
+
+                  {/* Remove Button */}
+                  {profilePictureUrl && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRemoveProfilePicture}
+                      disabled={isUploadingPicture}
+                      className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Remove
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Company Information Card */}
