@@ -8,6 +8,7 @@ interface ViewBlogPostModalProps {
     title: string;
     details: string;
     created_at: string;
+    image_url?: string | null;
   } | null;
 }
 
@@ -25,11 +26,11 @@ export function ViewBlogPostModal({ isOpen, onClose, post }: ViewBlogPostModalPr
         </DialogHeader>
         <div className="relative w-full aspect-[16/9] bg-accent/5 mb-6">
           <Image
-            src="/build-tactical-llc-logo.png"
-            alt="Build Tactical LLC Logo"
+            src={post.image_url || "/build-tactical-llc-logo.png"}
+            alt={post.image_url ? `${post.title} featured image` : "Build Tactical LLC Logo"}
             fill
             sizes="(max-width: 768px) 100vw, 800px"
-            className="object-contain p-8"
+            className={post.image_url ? "object-cover" : "object-contain p-8"}
             priority
           />
         </div>
