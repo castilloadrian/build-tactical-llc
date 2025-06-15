@@ -50,7 +50,7 @@ export default function ProjectProposalsPage() {
   // Set default tab based on user role
   useEffect(() => {
     if (publicUser?.role === 'Org Owner') {
-      setActiveTab('incoming'); // Org Owners only see received proposals
+      setActiveTab('outgoing'); // Org Owners now send proposals, so default to outgoing
     }
   }, [publicUser]);
 
@@ -83,6 +83,7 @@ export default function ProjectProposalsPage() {
   const fetchProposals = async (userId: string) => {
     try {
       let data, error;
+      let orgUserIds: string[] = []; // Track org user IDs for type determination
       
       if (publicUser?.role === 'Admin') {
         // Admins see ALL proposals
@@ -99,7 +100,7 @@ export default function ProjectProposalsPage() {
         data = result.data;
         error = result.error;
       } else if (publicUser?.role === 'Org Owner') {
-        // Org Owners see only received proposals for their organization
+        // Org Owners see ALL proposals sent by users from their organization AND contractor-to-contractor proposals tagged under their organization
         const { data: userOrgs, error: orgError } = await supabase
           .from('user-org')
           .select('org_id')
@@ -108,6 +109,16 @@ export default function ProjectProposalsPage() {
         const orgIds = userOrgs?.map(uo => uo.org_id) || [];
         
         if (orgIds.length > 0) {
+          // First, get all users who belong to the same organizations
+          const { data: orgUsers, error: orgUsersError } = await supabase
+            .from('user-org')
+            .select('user_id')
+            .in('org_id', orgIds);
+          
+          orgUserIds = orgUsers?.map(ou => ou.user_id) || [];
+          
+          if (orgUsersError) throw orgUsersError;
+          
           const result = await supabase
             .from('proposals')
             .select(`
@@ -116,7 +127,7 @@ export default function ProjectProposalsPage() {
               receiver_user:users!proposals_receiver_fkey(full_name),
               organization_data:organizations(name)
             `)
-            .in('organization', orgIds)
+            .or(`sender.in.(${orgUserIds.join(',')}),organization.in.(${orgIds.join(',')})`)
             .order('created_at', { ascending: false });
           
           data = result.data;
@@ -145,21 +156,43 @@ export default function ProjectProposalsPage() {
 
       if (error) throw error;
 
-      const formattedProposals: Proposal[] = data?.map((proposal: any) => ({
-        id: proposal.id,
-        title: proposal.title || '',
-        description: proposal.description || '',
-        status: proposal.status || 'Under Review',
-        created_at: proposal.created_at,
-        budget: proposal.budget || 0,
-        sender: proposal.sender,
-        receiver: proposal.receiver,
-        organization: proposal.organization,
-        sender_name: proposal.sender_user?.full_name || 'Unknown User',
-        receiver_name: proposal.receiver_user?.full_name || 'Unknown User',
-        organization_name: proposal.organization_data?.name || 'Unknown Organization',
-        type: proposal.sender === userId ? 'outgoing' : 'incoming'
-      })) || [];
+      const formattedProposals: Proposal[] = data?.map((proposal: any) => {
+        // Determine if proposal is outgoing or incoming based on user role
+        let proposalType: 'outgoing' | 'incoming';
+        
+        if (publicUser?.role === 'Org Owner') {
+          // For org owners, use a simpler and more reliable approach:
+          // 1. If sender is from our organization → "Sent Proposals" 
+          // 2. If sender is NOT from our organization but org is tagged → "Tagged Proposals"
+          
+          if (orgUserIds.includes(proposal.sender)) {
+            // Proposal sent by someone from our organization
+            proposalType = 'outgoing'; // Show in "Sent Proposals" tab
+          } else {
+            // Proposal sent by external party but our org is tagged
+            proposalType = 'incoming'; // Show in "Tagged Proposals" tab
+          }
+        } else {
+          // For contractors and admins, only proposals they personally sent are outgoing
+          proposalType = proposal.sender === userId ? 'outgoing' : 'incoming';
+        }
+        
+        return {
+          id: proposal.id,
+          title: proposal.title || '',
+          description: proposal.description || '',
+          status: proposal.status || 'Under Review',
+          created_at: proposal.created_at,
+          budget: proposal.budget || 0,
+          sender: proposal.sender,
+          receiver: proposal.receiver,
+          organization: proposal.organization,
+          sender_name: proposal.sender_user?.full_name || 'Unknown User',
+          receiver_name: proposal.receiver_user?.full_name || 'Unknown User',
+          organization_name: proposal.organization_data?.name || 'Unknown Organization',
+          type: proposalType
+        };
+      }) || [];
 
       setProposals(formattedProposals);
     } catch (error) {
@@ -264,8 +297,8 @@ export default function ProjectProposalsPage() {
         ? true // Show all in "All Proposals" tab
         : true; // Show all in "All Received" tab (we'll adjust tab logic)
     } else if (publicUser?.role === 'Org Owner') {
-      // Org Owners only see received proposals (incoming to their org)
-      return true; // All proposals fetched are already filtered for their org
+      // Org Owners see proposals they sent AND contractor-to-contractor proposals for their org
+      return activeTab === 'outgoing' ? proposal.type === 'outgoing' : proposal.type === 'incoming';
     } else {
       // Contractors see based on whether they sent or received
       return activeTab === 'outgoing' ? proposal.type === 'outgoing' : proposal.type === 'incoming';
@@ -348,15 +381,15 @@ export default function ProjectProposalsPage() {
           <h1 className="text-3xl font-bold text-foreground mb-3">Project Proposals</h1>
           <p className="text-muted-foreground text-base leading-relaxed">
             {publicUser?.role === 'Contractor' 
-              ? 'Send proposals and review incoming opportunities' 
+              ? 'Send proposals to other contractors and receive proposals from organizations' 
               : publicUser?.role === 'Org Owner'
-              ? 'Review proposals received for your organization'
+              ? 'Send proposals to contractors and view contractor-to-contractor proposals for your organization'
               : 'View and manage all proposals across the platform'}
           </p>
         </div>
         
-        {/* Show create button only for Contractors and Admins */}
-        {(publicUser?.role === 'Contractor' || publicUser?.role === 'Admin') && (
+        {/* Show create button for Contractors, Org Owners, and Admins */}
+        {(publicUser?.role === 'Contractor' || publicUser?.role === 'Org Owner' || publicUser?.role === 'Admin') && (
           <div className="flex-shrink-0">
             <Button 
               className="bg-accent hover:bg-accent/90 text-white flex items-center gap-2 px-6 py-3 text-sm font-medium"
@@ -373,8 +406,8 @@ export default function ProjectProposalsPage() {
       <div className="mb-8">
         <div className="border-b border-border">
           <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-            {/* Contractors see both tabs, Admins see only one tab, Org Owners see only received */}
-            {publicUser?.role === 'Contractor' && (
+            {/* Contractors and Org Owners see both tabs, Admins see only one tab */}
+            {(publicUser?.role === 'Contractor' || publicUser?.role === 'Org Owner') && (
               <button
                 onClick={() => setActiveTab('outgoing')}
                 className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
@@ -414,7 +447,7 @@ export default function ProjectProposalsPage() {
                   <Inbox className="h-4 w-4" />
                   {publicUser?.role === 'Contractor' 
                     ? 'Received Proposals'
-                    : 'Received Proposals'}
+                    : 'Tagged Proposals'}
                 </div>
               </button>
             )}
@@ -688,10 +721,14 @@ export default function ProjectProposalsPage() {
               {activeTab === 'outgoing' 
                 ? (publicUser?.role === 'Contractor' 
                     ? "You haven't sent any proposals yet." 
+                    : publicUser?.role === 'Org Owner'
+                    ? "You haven't sent any proposals yet."
                     : "No proposals have been sent yet.")
-                : (publicUser?.role === 'Contractor'
-                    ? "You haven't received any proposals yet."
-                    : "No proposals have been received yet.")}
+                                    : (publicUser?.role === 'Contractor'
+                        ? "You haven't received any proposals yet."
+                        : publicUser?.role === 'Org Owner'
+                        ? "No contractor-to-contractor proposals have been tagged under your organization yet."
+                        : "No proposals have been received yet.")}
             </p>
           </CardContent>
         </Card>

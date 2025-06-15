@@ -134,7 +134,7 @@ export function CreateProposalModal({
           </div>
           
           <div className="grid gap-2">
-            <Label htmlFor="contractor">Contractor</Label>
+            <Label htmlFor="contractor">Send to Contractor</Label>
             <Select value={receiverId} onValueChange={setReceiverId}>
               <SelectTrigger id="contractor" className="border-primary/20">
                 <SelectValue placeholder="Select a contractor" />
