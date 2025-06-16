@@ -165,16 +165,16 @@ export default function ProjectProposalsPage() {
         let proposalType: 'outgoing' | 'incoming';
         
         if (currentUser?.role === 'Org Owner') {
-          // For org owners, use a simpler and more reliable approach:
-          // 1. If sender is from our organization → "Sent Proposals" 
-          // 2. If sender is NOT from our organization but org is tagged → "Tagged Proposals"
+          // For org owners, be more specific:
+          // 1. Only proposals personally sent by the org owner → "Sent Proposals" 
+          // 2. All other proposals (from org members OR tagged to org) → "Organization Proposals"
           
-          if (orgUserIds.includes(proposal.sender)) {
-            // Proposal sent by someone from our organization
+          if (proposal.sender === userId) {
+            // Proposal personally sent by this org owner
             proposalType = 'outgoing'; // Show in "Sent Proposals" tab
           } else {
-            // Proposal sent by external party but our org is tagged
-            proposalType = 'incoming'; // Show in "Tagged Proposals" tab
+            // Proposal sent by org members OR external parties tagged to org
+            proposalType = 'incoming'; // Show in "Organization Proposals" tab
           }
         } else {
           // For contractors and admins, only proposals they personally sent are outgoing
@@ -452,7 +452,7 @@ export default function ProjectProposalsPage() {
                   <Inbox className="h-4 w-4" />
                   {publicUser?.role === 'Contractor' 
                     ? 'Received Proposals'
-                    : 'Tagged Proposals'}
+                    : 'Organization Proposals'}
                 </div>
               </button>
             )}
@@ -492,6 +492,20 @@ export default function ProjectProposalsPage() {
                       <p className="text-muted-foreground truncate">{proposal.receiver_name}</p>
                     </div>
                   </>
+                )}
+                {/* Show Sender for Org Owners to clarify who sent the proposal */}
+                {publicUser?.role === 'Org Owner' && proposal.sender !== user.id && (
+                  <div>
+                    <span className="font-medium text-primary">Sent by:</span>
+                    <p className="text-muted-foreground truncate">{proposal.sender_name}</p>
+                  </div>
+                )}
+                {/* Show Receiver for Org Owners to see who it was sent to */}
+                {publicUser?.role === 'Org Owner' && activeTab === 'incoming' && (
+                  <div>
+                    <span className="font-medium text-primary">Sent to:</span>
+                    <p className="text-muted-foreground truncate">{proposal.receiver_name}</p>
+                  </div>
                 )}
                 <div>
                   <span className="font-medium text-primary">Organization:</span>
@@ -546,16 +560,19 @@ export default function ProjectProposalsPage() {
                           >
                             Deny
                           </Button>
-                          <Button 
-                            size="sm" 
-                            className="flex-1 bg-green-600 hover:bg-green-700"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleApprove(proposal.id.toString());
-                            }}
-                          >
-                            Approve
-                          </Button>
+                          {/* Only show approve button for contractors or if user is the actual receiver */}
+                          {(publicUser?.role === 'Contractor' || proposal.receiver === user.id) && (
+                            <Button 
+                              size="sm" 
+                              className="flex-1 bg-green-600 hover:bg-green-700"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleApprove(proposal.id.toString());
+                              }}
+                            >
+                              Approve
+                            </Button>
+                          )}
                         </>
                       )}
                     </div>
@@ -584,8 +601,10 @@ export default function ProjectProposalsPage() {
         
         {/* Header for non-Admin view */}
         {publicUser?.role !== 'Admin' && filteredProposals.length > 0 && (
-          <div className="grid grid-cols-5 gap-4 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border">
+          <div className={`grid gap-4 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border ${publicUser?.role === 'Org Owner' ? 'grid-cols-7' : 'grid-cols-5'}`}>
             <div>Title</div>
+            {publicUser?.role === 'Org Owner' && <div>Sent by</div>}
+            {publicUser?.role === 'Org Owner' && <div>Sent to</div>}
             <div>Organization</div>
             <div>Amount</div>
             <div>Status</div>
@@ -623,10 +642,20 @@ export default function ProjectProposalsPage() {
                 </div>
               ) : (
                 /* Non-admin view */
-                <div className="grid grid-cols-5 gap-4 items-center h-12">
+                <div className={`grid gap-4 items-center h-12 ${publicUser?.role === 'Org Owner' ? 'grid-cols-7' : 'grid-cols-5'}`}>
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-foreground truncate">{proposal.title}</div>
                   </div>
+                  {publicUser?.role === 'Org Owner' && (
+                    <div className="text-sm text-foreground truncate">
+                      {proposal.sender === user.id ? 'You' : proposal.sender_name}
+                    </div>
+                  )}
+                  {publicUser?.role === 'Org Owner' && (
+                    <div className="text-sm text-foreground truncate">
+                      {proposal.receiver === user.id ? 'You' : proposal.receiver_name}
+                    </div>
+                  )}
                   <div className="text-sm text-foreground truncate">{proposal.organization_name}</div>
                   <div className="text-sm text-foreground">${proposal.budget?.toLocaleString()}</div>
                   <div>
@@ -696,16 +725,19 @@ export default function ProjectProposalsPage() {
                           >
                             Deny
                           </Button>
-                          <Button 
-                            size="sm" 
-                            className="bg-green-600 hover:bg-green-700"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleApprove(proposal.id.toString());
-                            }}
-                          >
-                            Approve
-                          </Button>
+                          {/* Only show approve button for contractors or if user is the actual receiver */}
+                          {(publicUser?.role === 'Contractor' || proposal.receiver === user.id) && (
+                            <Button 
+                              size="sm" 
+                              className="bg-green-600 hover:bg-green-700"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleApprove(proposal.id.toString());
+                              }}
+                            >
+                              Approve
+                            </Button>
+                          )}
                         </>
                       )}
                     </div>
