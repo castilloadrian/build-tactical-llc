@@ -33,6 +33,8 @@ interface ContractorTrades {
   is_scoreboards: boolean;
   is_gymfloor: boolean;
   is_pool: boolean;
+  is_it: boolean;
+  is_security: boolean;
   other: string[];
 }
 
@@ -65,6 +67,91 @@ interface UserProject {
   project: Project;
 }
 
+// Add phone number formatting function
+const formatPhoneNumber = (phone: string): string => {
+  // Remove all non-digit characters
+  const cleaned = phone.replace(/\D/g, '');
+  
+  // Handle 10-digit numbers (standard US format)
+  if (cleaned.length === 10) {
+    return `(${cleaned.slice(0, 3)})-${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+  }
+  
+  // Handle 11-digit numbers (with country code)
+  if (cleaned.length === 11) {
+    return `+${cleaned.slice(0, 1)} (${cleaned.slice(1, 4)})-${cleaned.slice(4, 7)}-${cleaned.slice(7)}`;
+  }
+  
+  // Handle partial numbers
+  if (cleaned.length > 0) {
+    if (cleaned.length <= 3) {
+      return `(${cleaned}`;
+    } else if (cleaned.length <= 6) {
+      return `(${cleaned.slice(0, 3)})-${cleaned.slice(3)}`;
+    } else if (cleaned.length <= 10) {
+      return `(${cleaned.slice(0, 3)})-${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+    } else if (cleaned.length === 11) {
+      return `+${cleaned.slice(0, 1)} (${cleaned.slice(1, 4)})-${cleaned.slice(4, 7)}-${cleaned.slice(7)}`;
+    }
+  }
+  
+  // Return original if no digits
+  return phone;
+};
+
+// Add phone number cleaning function for database storage
+const cleanPhoneNumber = (phone: string): string => {
+  return phone.replace(/\D/g, '');
+};
+
+// Add function to handle phone number input
+const handlePhoneInput = (value: string, setter: (value: string) => void) => {
+  // Remove all non-digit characters
+  const cleaned = value.replace(/\D/g, '');
+  
+  // Only allow up to 11 digits
+  if (cleaned.length <= 11) {
+    // Format the number as the user types
+    const formatted = formatPhoneNumber(cleaned);
+    setter(formatted);
+  }
+};
+
+// Add function to handle phone number keydown
+const handlePhoneKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  // Allow: backspace, delete, tab, escape, enter, arrows
+  if ([8, 9, 13, 27, 46, 37, 38, 39, 40].includes(e.keyCode)) {
+    return;
+  }
+  
+  // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+  if ((e.ctrlKey || e.metaKey) && [65, 67, 86, 88].includes(e.keyCode)) {
+    return;
+  }
+  
+  // Allow: home, end
+  if ([35, 36].includes(e.keyCode)) {
+    return;
+  }
+  
+  // Allow only digits
+  if (!/^\d$/.test(e.key)) {
+    e.preventDefault();
+  }
+};
+
+// Add function to handle phone number paste
+const handlePhonePaste = (e: React.ClipboardEvent<HTMLInputElement>, setter: (value: string) => void) => {
+  e.preventDefault();
+  const pastedData = e.clipboardData.getData('text');
+  const cleaned = pastedData.replace(/\D/g, '');
+  
+  if (cleaned.length <= 11) {
+    const formatted = formatPhoneNumber(cleaned);
+    setter(formatted);
+  }
+};
+
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
   const [publicUser, setPublicUser] = useState<any>(null);
@@ -88,6 +175,8 @@ export default function ProfilePage() {
     is_scoreboards: false,
     is_gymfloor: false,
     is_pool: false,
+    is_it: false,
+    is_security: false,
     other: [],
   });
   const [clientTypes, setClientTypes] = useState<ContractorClientTypes>({
@@ -108,6 +197,7 @@ export default function ProfilePage() {
     city: '',
     state: '',
     website: '',
+    phone: '',
   });
 
   const [isEditingDetails, setIsEditingDetails] = useState(false);
@@ -169,6 +259,8 @@ export default function ProfilePage() {
             is_scoreboards,
             is_gymfloor,
             is_pool,
+            is_it,
+            is_security,
             other
           ),
           contractor_client_types (
@@ -217,6 +309,7 @@ export default function ProfilePage() {
           city: publicUser.con_city || '',
           state: publicUser.con_state || '',
           website: publicUser.website || '',
+          phone: publicUser.company_phone || '',
         });
         
         setEditedDetails({
@@ -323,6 +416,7 @@ export default function ProfilePage() {
           con_city: editedCompany.city,
           con_state: editedCompany.state,
           website: editedCompany.website,
+          company_phone: cleanPhoneNumber(editedCompany.phone),
         })
         .eq('id', user.id);
 
@@ -338,6 +432,7 @@ export default function ProfilePage() {
         con_city: editedCompany.city,
         con_state: editedCompany.state,
         website: editedCompany.website,
+        company_phone: cleanPhoneNumber(editedCompany.phone),
       }));
 
       // Close edit mode
@@ -375,6 +470,7 @@ export default function ProfilePage() {
         city: publicUser?.con_city || '',
         state: publicUser?.con_state || '',
         website: publicUser?.website || '',
+        phone: publicUser?.company_phone || '',
       });
     }
   }, [isEditingCompany, publicUser]);
@@ -384,6 +480,8 @@ export default function ProfilePage() {
     try {
       const formatTradeName = (key: string) => {
         if (key === 'is_ge') return 'General Contractor';
+        if (key === 'is_it') return 'IT';
+        if (key === 'is_security') return 'Safety & Security';
         return key.replace('is_', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
       };
 
@@ -976,7 +1074,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Company Information Card */}
-      {userRole === 'Contractor' && (
+      {(userRole === 'Contractor' || userRole === 'Org Owner') && (
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">Company Information</h2>
@@ -992,73 +1090,144 @@ export default function ProfilePage() {
           </div>
           <div className="bg-background p-6 rounded-lg border border-primary/20 hover:bg-primary/5">
             <div className="grid grid-cols-1 gap-4">
+              {userRole === 'Contractor' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-base font-bold text-primary mb-2 pb-1 border-b border-primary/10">Company Name</div>
+                      {isEditingCompany ? (
+                        <input
+                          type="text"
+                          className="w-full p-2 border rounded-md"
+                          value={editedCompany.companyName}
+                          onChange={(e) => setEditedCompany(prev => ({ ...prev, companyName: e.target.value }))}
+                        />
+                      ) : (
+                        <div className="text-sm break-words">{publicUser?.con_company_name || 'Not specified'}</div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-base font-bold text-primary mb-2 pb-1 border-b border-primary/10">Company Website</div>
+                      {isEditingCompany ? (
+                        <input
+                          type="url"
+                          className="w-full p-2 border rounded-md"
+                          value={editedCompany.website}
+                          onChange={(e) => setEditedCompany(prev => ({ ...prev, website: e.target.value }))}
+                          placeholder="https://example.com"
+                        />
+                      ) : (
+                        <div className="text-sm break-words">
+                          {publicUser?.website ? (
+                            <a 
+                              href={publicUser.website.startsWith('http') ? publicUser.website : `https://${publicUser.website}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline"
+                            >
+                              {publicUser.website}
+                            </a>
+                          ) : (
+                            'Not specified'
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-base font-bold text-primary mb-2 pb-1 border-b border-primary/10">City</div>
+                      {isEditingCompany ? (
+                        <input
+                          type="text"
+                          className="w-full p-2 border rounded-md"
+                          value={editedCompany.city}
+                          onChange={(e) => setEditedCompany(prev => ({ ...prev, city: e.target.value }))}
+                        />
+                      ) : (
+                        <div className="text-sm break-words">{publicUser?.con_city || 'Not specified'}</div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-base font-bold text-primary mb-2 pb-1 border-b border-primary/10">State</div>
+                      {isEditingCompany ? (
+                        <input
+                          type="text"
+                          className="w-full p-2 border rounded-md"
+                          value={editedCompany.state}
+                          onChange={(e) => setEditedCompany(prev => ({ ...prev, state: e.target.value }))}
+                        />
+                      ) : (
+                        <div className="text-sm break-words">{publicUser?.con_state || 'Not specified'}</div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+              {userRole === 'Org Owner' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-base font-bold text-primary mb-2 pb-1 border-b border-primary/10">Company Website</div>
+                    {isEditingCompany ? (
+                      <input
+                        type="url"
+                        className="w-full p-2 border rounded-md"
+                        value={editedCompany.website}
+                        onChange={(e) => setEditedCompany(prev => ({ ...prev, website: e.target.value }))}
+                        placeholder="https://example.com"
+                      />
+                    ) : (
+                      <div className="text-sm break-words">
+                        {publicUser?.website ? (
+                          <a 
+                            href={publicUser.website.startsWith('http') ? publicUser.website : `https://${publicUser.website}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline"
+                          >
+                            {publicUser.website}
+                          </a>
+                        ) : (
+                          'Not specified'
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="text-base font-bold text-primary mb-2 pb-1 border-b border-primary/10">Company Name</div>
+                  <div className="text-base font-bold text-primary mb-2 pb-1 border-b border-primary/10">Phone Number</div>
                   {isEditingCompany ? (
                     <input
-                      type="text"
+                      type="tel"
                       className="w-full p-2 border rounded-md"
-                      value={editedCompany.companyName}
-                      onChange={(e) => setEditedCompany(prev => ({ ...prev, companyName: e.target.value }))}
-                    />
-                  ) : (
-                    <div className="text-sm break-words">{publicUser?.con_company_name || 'Not specified'}</div>
-                  )}
-                </div>
-                <div>
-                  <div className="text-base font-bold text-primary mb-2 pb-1 border-b border-primary/10">Company Website</div>
-                  {isEditingCompany ? (
-                    <input
-                      type="url"
-                      className="w-full p-2 border rounded-md"
-                      value={editedCompany.website}
-                      onChange={(e) => setEditedCompany(prev => ({ ...prev, website: e.target.value }))}
-                      placeholder="https://example.com"
+                      value={editedCompany.phone}
+                      onChange={(e) => handlePhoneInput(e.target.value, (value) => 
+                        setEditedCompany(prev => ({ ...prev, phone: value }))
+                      )}
+                      onKeyDown={handlePhoneKeyDown}
+                      onPaste={(e) => handlePhonePaste(e, (value) => 
+                        setEditedCompany(prev => ({ ...prev, phone: value }))
+                      )}
+                      placeholder="(123) 456-7890"
+                      maxLength={16} // Maximum length including formatting characters
+                      pattern="^(\+\d{1})?[ ]?\(?\d{3}\)?[- ]?\d{3}[- ]?\d{4}$"
+                      title="Please enter a valid phone number"
                     />
                   ) : (
                     <div className="text-sm break-words">
-                      {publicUser?.website ? (
+                      {publicUser?.company_phone ? (
                         <a 
-                          href={publicUser.website.startsWith('http') ? publicUser.website : `https://${publicUser.website}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          href={`tel:${publicUser.company_phone}`}
                           className="text-primary hover:underline"
                         >
-                          {publicUser.website}
+                          {formatPhoneNumber(publicUser.company_phone)}
                         </a>
                       ) : (
                         'Not specified'
                       )}
                     </div>
-                  )}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-base font-bold text-primary mb-2 pb-1 border-b border-primary/10">City</div>
-                  {isEditingCompany ? (
-                    <input
-                      type="text"
-                      className="w-full p-2 border rounded-md"
-                      value={editedCompany.city}
-                      onChange={(e) => setEditedCompany(prev => ({ ...prev, city: e.target.value }))}
-                    />
-                  ) : (
-                    <div className="text-sm break-words">{publicUser?.con_city || 'Not specified'}</div>
-                  )}
-                </div>
-                <div>
-                  <div className="text-base font-bold text-primary mb-2 pb-1 border-b border-primary/10">State</div>
-                  {isEditingCompany ? (
-                    <input
-                      type="text"
-                      className="w-full p-2 border rounded-md"
-                      value={editedCompany.state}
-                      onChange={(e) => setEditedCompany(prev => ({ ...prev, state: e.target.value }))}
-                    />
-                  ) : (
-                    <div className="text-sm break-words">{publicUser?.con_state || 'Not specified'}</div>
                   )}
                 </div>
               </div>

@@ -44,7 +44,8 @@
     "react-dom": "19.0.0",
     "select": "^1.1.2",
     "shadcn": "^2.4.0-canary.9",
-    "sonner": "^2.0.1"
+    "sonner": "^2.0.1",
+    "xai": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "22.10.2",
