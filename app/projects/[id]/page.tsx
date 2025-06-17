@@ -3,13 +3,15 @@
 import { useState, useEffect, use, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, Upload, Download, RefreshCw, File, Trash, BarChart3, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, Upload, Download, RefreshCw, File, Trash, BarChart3, ArrowLeft, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TaskList } from "@/components/task-list";
+import { ProjectUpdates } from "@/components/project-updates";
 import { User } from '@supabase/supabase-js';
 import { toast } from "sonner";
 import { ExpensesChart } from "@/components/expenses-chart";
+import { GenerateReportModal } from "@/components/generate-report-modal";
 import {
   Dialog,
   DialogContent,
@@ -84,6 +86,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [fileToEditTags, setFileToEditTags] = useState<ProjectFile | null>(null);
   const [editingTags, setEditingTags] = useState<string>('');
   const [isOrgOwner, setIsOrgOwner] = useState<boolean>(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const supabase = createClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -538,7 +541,17 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </Button>
           </Link>
           <h1 className="text-2xl sm:text-3xl font-bold text-center sm:absolute sm:left-1/2 sm:transform sm:-translate-x-1/2">{projectName}</h1>
-          <Select
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsReportModalOpen(true)}
+              className="gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              Generate Report
+            </Button>
+            <Select
             value={projectStatus}
             onValueChange={handleStatusChange}
           >
@@ -587,6 +600,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               </SelectItem>
             </SelectContent>
           </Select>
+          </div>
         </div>
         
         {/* Project Overview Stats */}
@@ -1111,6 +1125,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </CardContent>
       </Card>
 
+      {/* Project Updates Section - Full Width */}
+      <div className="mt-6">
+        <ProjectUpdates projectId={parseInt(projectId)} />
+      </div>
+
       {/* Existing Dialogs */}
       <AlertDialog open={!!fileToDelete} onOpenChange={(open) => !open && setFileToDelete(null)}>
         <AlertDialogContent>
@@ -1225,6 +1244,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Generate Report Modal */}
+      <GenerateReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        projectId={projectId}
+        projectName={projectName}
+      />
     </div>
   );
 }

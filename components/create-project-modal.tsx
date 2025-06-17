@@ -26,13 +26,15 @@ interface CreateProjectModalProps {
   onClose: () => void;
   onSubmit: (data: { name: string; description: string; organization_id: string; status: string }) => void;
   organizations: Organization[];
+  preselectedOrgId?: string;
 }
 
 export function CreateProjectModal({ 
   isOpen, 
   onClose, 
   onSubmit,
-  organizations = []
+  organizations = [],
+  preselectedOrgId
 }: CreateProjectModalProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -44,10 +46,10 @@ export function CreateProjectModal({
     if (isOpen) {
       setName("");
       setDescription("");
-      setOrganizationId(organizations[0]?.id.toString() || "");
+      setOrganizationId(preselectedOrgId || organizations[0]?.id.toString() || "");
       setStatus("Planning");
     }
-  }, [isOpen, organizations]);
+  }, [isOpen, organizations, preselectedOrgId]);
 
   const handleSubmit = () => {
     onSubmit({ 
@@ -89,21 +91,24 @@ export function CreateProjectModal({
             />
           </div>
           
-          <div className="grid gap-2">
-            <Label htmlFor="organization">Organization</Label>
-            <Select value={organizationId} onValueChange={setOrganizationId}>
-              <SelectTrigger id="organization" className="border-primary/20">
-                <SelectValue placeholder="Select organization" />
-              </SelectTrigger>
-              <SelectContent>
-                {organizations.map((org) => (
-                  <SelectItem key={org.id} value={org.id.toString()}>
-                    {org.name || 'No Name'}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Only show organization selector if no preselectedOrgId is provided */}
+          {!preselectedOrgId && (
+            <div className="grid gap-2">
+              <Label htmlFor="organization">Organization</Label>
+              <Select value={organizationId} onValueChange={setOrganizationId}>
+                <SelectTrigger id="organization" className="border-primary/20">
+                  <SelectValue placeholder="Select organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  {organizations.map((org) => (
+                    <SelectItem key={org.id} value={org.id.toString()}>
+                      {org.name || 'No Name'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           
           <div className="grid gap-2">
             <Label htmlFor="status">Status</Label>
@@ -128,7 +133,7 @@ export function CreateProjectModal({
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={!name.trim() || !organizationId}
+            disabled={!name.trim() || (!preselectedOrgId && !organizationId)}
           >
             Create
           </Button>

@@ -10,16 +10,20 @@ export const signUpAction = async (formData: FormData) => {
   const password = formData.get("password")?.toString();
   const fullName = formData.get("fullName")?.toString();
   const org_proj = formData.get("org_proj")?.toString();
+  const role = formData.get("role")?.toString();
   const supabase = await createClient();
   const origin = (await headers()).get("origin");
 
-  if (!email || !password || !fullName) {
+  if (!email || !password || !fullName || !role) {
     return encodedRedirect(
       "error",
       "/sign-up",
-      "Email, password, and full name are required",
+      "Email, password, full name, and role are required",
     );
   }
+
+  // Map the role: 'Organization' -> 'Org Owner', 'Contractor' -> 'Contractor'
+  const mappedRole = role === 'Organization' ? 'Org Owner' : role;
 
   const { error } = await supabase.auth.signUp({
     email,
@@ -29,6 +33,7 @@ export const signUpAction = async (formData: FormData) => {
       data: {
         full_name: fullName,
         org_proj: org_proj,
+        role: mappedRole,
       }
     },
   });

@@ -1,9 +1,11 @@
 'use client';
 import { createClient } from "@/utils/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { CreateProjectModal } from "@/components/create-project-modal";
 import { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
-import { Building2, Briefcase, LayoutDashboard, PieChart } from "lucide-react";
+import { Building2, Briefcase, LayoutDashboard, PieChart, Plus } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRouter } from 'next/navigation';
 
@@ -13,6 +15,7 @@ export default function DashboardPage() {
   const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [isProjectCardOpen, setIsProjectCardOpen] = useState(false);
+  const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
   const [orgsList, setOrgsList] = useState<any[]>([]);
   const [projectsList, setProjectsList] = useState<any[]>([]);
   const supabase = createClient();
@@ -141,6 +144,51 @@ export default function DashboardPage() {
     return counts;
   };
 
+  // Handle project creation
+  const handleCreateProject = async (data: { 
+    name: string; 
+    description: string; 
+    organization_id: string; 
+    status: string 
+  }) => {
+    const { data: newProject, error } = await supabase
+      .from('projects')
+      .insert([
+        { 
+          name: data.name || null,
+          description: data.description || null,
+          organization_id: parseInt(data.organization_id),
+          status: data.status || null
+        }
+      ])
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating project:', error);
+      return;
+    }
+    
+    if (newProject) {
+      // Get the organization name for the new project
+      const org = orgsList.find(o => o.id === parseInt(data.organization_id));
+      
+      // Create properly typed project
+      const typedProject = {
+        id: newProject.id,
+        name: newProject.name,
+        description: newProject.description,
+        status: newProject.status,
+        organization_id: newProject.organization_id,
+        created_at: newProject.created_at,
+        organization: org ? { name: org.name } : undefined
+      };
+      
+      // Update the projects list
+      setProjectsList(prevProjects => [...prevProjects, typedProject]);
+    }
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -177,45 +225,63 @@ export default function DashboardPage() {
           </Card>
         )}
 
-        {/* Projects and Status Summary - Modified to show for both contractors and regular users */}
-        {((selectedOrg && projectsList.length > 0) || (orgsList.length === 0 && projectsList.length > 0)) && (
+        {/* Projects and Status Summary - Show when org is selected OR when contractor has projects */}
+        {(selectedOrg || (orgsList.length === 0 && projectsList.length > 0)) && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {/* Projects List - Takes 3/4 of the space on medium screens and up */}
             <div className="md:col-span-3">
               <Card>
                 <CardHeader>
-                  <CardTitle>Projects</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Projects</CardTitle>
+                    {selectedOrg && (
+                      <Button 
+                        size="sm" 
+                        onClick={() => setIsCreateProjectModalOpen(true)}
+                        className="flex items-center gap-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Create Project
+                      </Button>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {projectsList.map((project) => (
-                      <Card 
-                        key={project.id} 
-                        className="p-4 hover:bg-muted/50 transition-colors cursor-pointer"
-                        onClick={() => router.push(`/projects/${project.id}`)}
-                      >
-                        <div className="flex justify-between items-center gap-4">
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-medium truncate">{project.name}</h3>
-                            <p className="text-sm text-muted-foreground truncate">
-                              {project.organization?.name}
-                            </p>
+                  {projectsList.length > 0 ? (
+                    <div className="space-y-4">
+                      {projectsList.map((project) => (
+                        <Card 
+                          key={project.id} 
+                          className="p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+                          onClick={() => router.push(`/projects/${project.id}`)}
+                        >
+                          <div className="flex justify-between items-center gap-4">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-medium truncate">{project.name}</h3>
+                              <p className="text-sm text-muted-foreground truncate">
+                                {project.organization?.name}
+                              </p>
+                            </div>
+                            <div className="flex-shrink-0">
+                              <span className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap ${
+                                project.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                                project.status === 'Active' ? 'bg-blue-100 text-blue-800' :
+                                project.status === 'On Hold' ? 'bg-yellow-100 text-yellow-800' :
+                                project.status === 'Cancelled' ? 'bg-red-100 text-red-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {project.status || 'Active'}
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex-shrink-0">
-                            <span className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap ${
-                              project.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                              project.status === 'Active' ? 'bg-blue-100 text-blue-800' :
-                              project.status === 'On Hold' ? 'bg-yellow-100 text-yellow-800' :
-                              project.status === 'Cancelled' ? 'bg-red-100 text-red-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {project.status || 'Active'}
-                            </span>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center text-muted-foreground py-8">
+                      No projects found for this organization.
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -231,29 +297,37 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {Object.entries(getStatusCounts()).map(([status, count]) => 
-                      count > 0 ? (
-                        <div key={status} className="flex justify-between items-center">
-                          <div className="flex items-center gap-2">
-                            <span className={`w-3 h-3 rounded-full ${
-                              status === 'Completed' ? 'bg-green-500' :
-                              status === 'Active' ? 'bg-blue-500' :
-                              status === 'On Hold' ? 'bg-yellow-500' :
-                              status === 'Cancelled' ? 'bg-red-500' :
-                              'bg-purple-500'
-                            }`}></span>
-                            <span className="text-sm">{status}</span>
+                    {projectsList.length > 0 ? (
+                      <>
+                        {Object.entries(getStatusCounts()).map(([status, count]) => 
+                          count > 0 ? (
+                            <div key={status} className="flex justify-between items-center">
+                              <div className="flex items-center gap-2">
+                                <span className={`w-3 h-3 rounded-full ${
+                                  status === 'Completed' ? 'bg-green-500' :
+                                  status === 'Active' ? 'bg-blue-500' :
+                                  status === 'On Hold' ? 'bg-yellow-500' :
+                                  status === 'Cancelled' ? 'bg-red-500' :
+                                  'bg-purple-500'
+                                }`}></span>
+                                <span className="text-sm">{status}</span>
+                              </div>
+                              <span className="font-medium">{count}</span>
+                            </div>
+                          ) : null
+                        )}
+                        <div className="pt-2 border-t mt-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium">Total</span>
+                            <span className="font-medium">{projectsList.length}</span>
                           </div>
-                          <span className="font-medium">{count}</span>
                         </div>
-                      ) : null
-                    )}
-                    <div className="pt-2 border-t mt-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium">Total</span>
-                        <span className="font-medium">{projectsList.length}</span>
+                      </>
+                    ) : (
+                      <div className="text-center text-muted-foreground text-sm py-4">
+                        No projects yet.
                       </div>
-                    </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -262,12 +336,14 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* No Projects Message */}
-      {selectedOrg && projectsList.length === 0 && (
-        <div className="text-center text-muted-foreground">
-          No projects found for this organization.
-        </div>
-      )}
+      {/* Create Project Modal */}
+      <CreateProjectModal
+        isOpen={isCreateProjectModalOpen}
+        onClose={() => setIsCreateProjectModalOpen(false)}
+        onSubmit={handleCreateProject}
+        organizations={orgsList}
+        preselectedOrgId={selectedOrg || undefined}
+      />
     </div>
   );
 }

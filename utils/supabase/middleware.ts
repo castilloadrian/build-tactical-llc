@@ -39,8 +39,13 @@ export const updateSession = async (request: NextRequest) => {
     // https://supabase.com/docs/guides/auth/server-side/nextjs
     const user = await supabase.auth.getUser();
 
-    // protected dashboard routes
-    if (request.nextUrl.pathname.startsWith("/dashboard") && user.error) {
+    // protected routes - require authentication
+    const protectedRoutes = ["/dashboard"];
+    const isProtectedRoute = protectedRoutes.some(route => 
+      request.nextUrl.pathname.startsWith(route)
+    );
+    
+    if (isProtectedRoute && user.error) {
       return NextResponse.redirect(new URL("/sign-in", request.url));
     }
 
