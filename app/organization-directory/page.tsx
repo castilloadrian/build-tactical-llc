@@ -29,6 +29,7 @@ export default function OrganizationDirectory() {
         const { data, error } = await supabase
           .from('organizations')
           .select('*')
+          .eq('is_private', false)
           .order('name');
 
         if (error) throw error;

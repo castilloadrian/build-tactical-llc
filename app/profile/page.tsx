@@ -14,6 +14,7 @@ interface Organization {
   description: string | null;
   created_at: string;
   organization_picture_url: string | null;
+  is_private: boolean;
 }
 
 interface ContractorTrades {
@@ -220,6 +221,10 @@ export default function ProfilePage() {
   const [isUploadingOrgPicture, setIsUploadingOrgPicture] = useState(false);
   const [orgPreviewUrl, setOrgPreviewUrl] = useState<string | null>(null);
 
+  // Privacy settings state
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [isUpdatingPrivacy, setIsUpdatingPrivacy] = useState(false);
+
   useEffect(() => {
     const fetchData = async () => {
       const supabase = createClient();
@@ -242,6 +247,7 @@ export default function ProfilePage() {
           con_coops,
           con_certs,
           profile_picture_url,
+          is_private,
           contractor_trades (
             is_ge,
             is_architect,
@@ -280,7 +286,8 @@ export default function ProfilePage() {
               name,
               description,
               created_at,
-              organization_picture_url
+              organization_picture_url,
+              is_private
             )
           ),
           user_projects:"user-project"(
@@ -302,6 +309,14 @@ export default function ProfilePage() {
         setOrganizations(publicUser.user_orgs?.map((uo: UserOrg) => uo.organization) || []);
         setProjects(publicUser.user_projects?.map((up: UserProject) => up.project) || []);
         setProfilePictureUrl(publicUser.profile_picture_url);
+        
+        // Initialize privacy state based on user role
+        if (publicUser.role === 'Contractor') {
+          setIsPrivate(publicUser.is_private || false);
+        } else if (publicUser.role === 'Org Owner' && publicUser.user_orgs?.length > 0) {
+          // For Org Owners, use the first organization's privacy setting
+          setIsPrivate(publicUser.user_orgs[0]?.organization?.is_private || false);
+        }
         
         // Initialize edit states with current values
         setEditedCompany({
@@ -944,6 +959,60 @@ export default function ProfilePage() {
     }
   };
 
+  // Privacy settings function
+  const handlePrivacyToggle = async () => {
+    if (!user) return;
+    
+    setIsUpdatingPrivacy(true);
+    const supabase = createClient();
+
+    try {
+      if (publicUser?.role === 'Contractor') {
+        // Update user's privacy setting
+        const { error } = await supabase
+          .from('users')
+          .update({ is_private: !isPrivate })
+          .eq('id', user.id);
+
+        if (error) throw error;
+
+        // Update local state
+        setPublicUser((prev: any) => ({
+          ...prev,
+          is_private: !isPrivate
+        }));
+        
+        toast.success(`Profile ${!isPrivate ? 'hidden' : 'made public'} successfully`);
+      } else if (publicUser?.role === 'Org Owner' && organizations.length > 0) {
+        // Update organization's privacy setting
+        const { error } = await supabase
+          .from('organizations')
+          .update({ is_private: !isPrivate })
+          .eq('id', organizations[0].id);
+
+        if (error) throw error;
+
+        // Update local state
+        setOrganizations(prev => 
+          prev.map(org => 
+            org.id === organizations[0].id 
+              ? { ...org, is_private: !isPrivate }
+              : org
+          )
+        );
+        
+        toast.success(`Organization ${!isPrivate ? 'hidden' : 'made public'} successfully`);
+      }
+
+      setIsPrivate(!isPrivate);
+    } catch (error) {
+      console.error('Error updating privacy setting:', error);
+      toast.error('Failed to update privacy setting');
+    } finally {
+      setIsUpdatingPrivacy(false);
+    }
+  };
+
   if (isLoading) {
     return <div className="container max-w-7xl py-12 px-4">Loading...</div>;
   }
@@ -1514,6 +1583,54 @@ export default function ProfilePage() {
           </>
         )}
       </div>
+
+      {/* Privacy Settings Section */}
+      {(userRole === 'Contractor' || userRole === 'Org Owner') && (
+        <div className="mb-8">
+          <h2 className="text-xl font-bold mb-4">Privacy Settings</h2>
+          <div className="bg-background p-6 rounded-lg border border-primary/20 hover:bg-primary/5">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold mb-2">
+                  {userRole === 'Contractor' ? 'Profile Visibility' : 'Organization Visibility'}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {userRole === 'Contractor' 
+                    ? 'Control whether your profile is visible to other users in the contractor directory.'
+                    : 'Control whether your organization is visible to other users in the organization directory.'
+                  }
+                </p>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  {isPrivate 
+                    ? 'Your profile is currently hidden from public directories.'
+                    : 'Your profile is currently visible in public directories.'
+                  }
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="privacy-toggle"
+                    checked={!isPrivate}
+                    onChange={handlePrivacyToggle}
+                    disabled={isUpdatingPrivacy}
+                    className="rounded border-primary/20"
+                  />
+                  <label htmlFor="privacy-toggle" className="text-sm font-medium">
+                    {isPrivate ? 'Hidden' : 'Public'}
+                  </label>
+                </div>
+                {isUpdatingPrivacy && (
+                  <div className="text-xs text-muted-foreground">
+                    Updating...
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-4">
         <Link href="/reset-password">

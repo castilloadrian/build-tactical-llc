@@ -172,6 +172,7 @@ export default function ContractorDirectory() {
           full_name,
           role,
           profile_picture_url,
+          is_private,
           ${isAuthed ? `
             email,
             proposed_org_proj,
@@ -223,6 +224,7 @@ export default function ContractorDirectory() {
           `}
         `)
         .eq('role', 'Contractor')
+        .eq('is_private', false)
         .order('full_name');
 
       if (error) {
