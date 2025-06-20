@@ -2,11 +2,21 @@
 import { createClient } from '@/utils/supabase/client';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Building2, Edit2, Save, X, Upload, User, Trash2 } from 'lucide-react';
+import { Building2, Edit2, Save, X, Upload, User, Trash2, Search, Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import Image from 'next/image';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuSeparator,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 
 interface Organization {
   id: number;
@@ -36,7 +46,18 @@ interface ContractorTrades {
   is_pool: boolean;
   is_it: boolean;
   is_security: boolean;
-  other: string[];
+  is_fire: boolean;
+  is_masonry: boolean;
+  is_construction_management: boolean;
+  is_sitework_civil: boolean;
+  is_metals_welding: boolean;
+  is_wood_carpentry: boolean;
+  is_thermal_moisture_protection: boolean;
+  is_doors_windows_glazing: boolean;
+  is_finishes: boolean;
+  is_solar_energy: boolean;
+  is_generators_backup: boolean;
+  is_environmental_specialty_services: boolean;
 }
 
 interface ContractorClientTypes {
@@ -49,6 +70,14 @@ interface ContractorClientTypes {
   is_hospitals: boolean;
   is_athletic_facilities: boolean;
   is_military_facilities: boolean;
+}
+
+interface ContractorCooperatives {
+  is_buy_board: boolean;
+  is_tips: boolean;
+  is_choice_partners: boolean;
+  is_omnia_partners: boolean;
+  is_sourcewell: boolean;
 }
 
 interface UserOrg {
@@ -178,7 +207,18 @@ export default function ProfilePage() {
     is_pool: false,
     is_it: false,
     is_security: false,
-    other: [],
+    is_fire: false,
+    is_masonry: false,
+    is_construction_management: false,
+    is_sitework_civil: false,
+    is_metals_welding: false,
+    is_wood_carpentry: false,
+    is_thermal_moisture_protection: false,
+    is_doors_windows_glazing: false,
+    is_finishes: false,
+    is_solar_energy: false,
+    is_generators_backup: false,
+    is_environmental_specialty_services: false,
   });
   const [clientTypes, setClientTypes] = useState<ContractorClientTypes>({
     is_joc: false,
@@ -192,6 +232,14 @@ export default function ProfilePage() {
     is_military_facilities: false,
   });
 
+  const [cooperatives, setCooperatives] = useState<ContractorCooperatives>({
+    is_buy_board: false,
+    is_tips: false,
+    is_choice_partners: false,
+    is_omnia_partners: false,
+    is_sourcewell: false,
+  });
+
   const [isEditingCompany, setIsEditingCompany] = useState(false);
   const [editedCompany, setEditedCompany] = useState({
     companyName: '',
@@ -203,13 +251,10 @@ export default function ProfilePage() {
 
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [editedDetails, setEditedDetails] = useState({
-    cooperatives: [] as string[],
     certifications: [] as string[],
   });
 
-  const [newCoop, setNewCoop] = useState('');
   const [newCert, setNewCert] = useState('');
-  const [newOtherTrade, setNewOtherTrade] = useState('');
   
   // Profile picture states
   const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
@@ -225,6 +270,44 @@ export default function ProfilePage() {
   const [isPrivate, setIsPrivate] = useState(false);
   const [isUpdatingPrivacy, setIsUpdatingPrivacy] = useState(false);
 
+  // Certifications dropdown states
+  const [availableCertifications, setAvailableCertifications] = useState<string[]>([]);
+  const [certificationSearchQuery, setCertificationSearchQuery] = useState('');
+  const [isCertificationDropdownOpen, setIsCertificationDropdownOpen] = useState(false);
+
+  // Function to fetch available certifications
+  const fetchAvailableCertifications = async () => {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('users')
+        .select('con_certs')
+        .eq('role', 'Contractor')
+        .not('con_certs', 'is', null);
+
+      if (error) {
+        console.error('Error fetching certifications:', error);
+        return;
+      }
+
+      // Extract unique certifications
+      const uniqueCerts = new Set<string>();
+      data?.forEach((user: any) => {
+        if (user.con_certs && Array.isArray(user.con_certs)) {
+          user.con_certs.forEach((cert: string) => {
+            if (cert && cert.trim()) {
+              uniqueCerts.add(cert.trim());
+            }
+          });
+        }
+      });
+
+      setAvailableCertifications(Array.from(uniqueCerts).sort());
+    } catch (error) {
+      console.error('Error in fetchAvailableCertifications:', error);
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       const supabase = createClient();
@@ -235,6 +318,9 @@ export default function ProfilePage() {
 
       if (!user) return;
 
+      // Fetch available certifications
+      await fetchAvailableCertifications();
+
       // Get public.users data with organization and project details
       const { data: publicUser, error } = await supabase
         .from('users')
@@ -244,7 +330,6 @@ export default function ProfilePage() {
           con_city,
           con_state,
           website,
-          con_coops,
           con_certs,
           profile_picture_url,
           is_private,
@@ -267,7 +352,18 @@ export default function ProfilePage() {
             is_pool,
             is_it,
             is_security,
-            other
+            is_fire,
+            is_masonry,
+            is_construction_management,
+            is_sitework_civil,
+            is_metals_welding,
+            is_wood_carpentry,
+            is_thermal_moisture_protection,
+            is_doors_windows_glazing,
+            is_finishes,
+            is_solar_energy,
+            is_generators_backup,
+            is_environmental_specialty_services
           ),
           contractor_client_types (
             is_joc,
@@ -279,6 +375,13 @@ export default function ProfilePage() {
             is_hospitals,
             is_athletic_facilities,
             is_military_facilities
+          ),
+          contractor_cooperatives (
+            is_buy_board,
+            is_tips,
+            is_choice_partners,
+            is_omnia_partners,
+            is_sourcewell
           ),
           user_orgs:"user-org"(
             organization:organizations(
@@ -328,7 +431,6 @@ export default function ProfilePage() {
         });
         
         setEditedDetails({
-          cooperatives: publicUser.con_coops || [],
           certifications: publicUser.con_certs || [],
         });
 
@@ -336,13 +438,17 @@ export default function ProfilePage() {
         if (publicUser.contractor_trades) {
           setTrades({
             ...publicUser.contractor_trades,
-            other: publicUser.contractor_trades.other || []
           });
         }
 
         // Set client types from contractor_client_types
         if (publicUser.contractor_client_types) {
           setClientTypes(publicUser.contractor_client_types);
+        }
+
+        // Set cooperatives from contractor_cooperatives
+        if (publicUser.contractor_cooperatives) {
+          setCooperatives(publicUser.contractor_cooperatives);
         }
       }
 
@@ -364,7 +470,6 @@ export default function ProfilePage() {
         .upsert({
           id: user.id,
           ...trades,
-          other: trades.other || []
         });
 
       if (tradesError) {
@@ -385,11 +490,23 @@ export default function ProfilePage() {
         return;
       }
 
+      // Update contractor_cooperatives
+      const { error: cooperativesError } = await supabase
+        .from('contractor_cooperatives')
+        .upsert({
+          id: user.id,
+          ...cooperatives
+        });
+
+      if (cooperativesError) {
+        console.error('Error saving cooperatives:', cooperativesError);
+        return;
+      }
+
       // Then update user details
       const { error: userError } = await supabase
         .from('users')
         .update({
-          con_coops: editedDetails.cooperatives,
           con_certs: editedDetails.certifications,
         })
         .eq('id', user.id);
@@ -402,13 +519,10 @@ export default function ProfilePage() {
       // Update local state
       setPublicUser((prev: any) => ({
         ...prev,
-        con_coops: editedDetails.cooperatives,
         con_certs: editedDetails.certifications,
-        contractor_trades: {
-          ...trades,
-          other: trades.other || []
-        },
-        contractor_client_types: clientTypes
+        contractor_trades: trades,
+        contractor_client_types: clientTypes,
+        contractor_cooperatives: cooperatives
       }));
 
       // Close edit mode
@@ -471,7 +585,6 @@ export default function ProfilePage() {
     if (!isEditingDetails) {
       // Reset edited details when edit mode is closed
       setEditedDetails({
-        cooperatives: publicUser?.con_coops || [],
         certifications: publicUser?.con_certs || [],
       });
     }
@@ -497,6 +610,18 @@ export default function ProfilePage() {
         if (key === 'is_ge') return 'General Contractor';
         if (key === 'is_it') return 'IT';
         if (key === 'is_security') return 'Safety & Security';
+        if (key === 'is_fire') return 'Fire';
+        if (key === 'is_masonry') return 'Masonry';
+        if (key === 'is_construction_management') return 'Construction Management';
+        if (key === 'is_sitework_civil') return 'Sitework & Civil';
+        if (key === 'is_metals_welding') return 'Metals & Welding';
+        if (key === 'is_wood_carpentry') return 'Wood & Carpentry';
+        if (key === 'is_thermal_moisture_protection') return 'Thermal & Moisture Protection';
+        if (key === 'is_doors_windows_glazing') return 'Doors, Windows, Glazing';
+        if (key === 'is_finishes') return 'Finishes';
+        if (key === 'is_solar_energy') return 'Solar Energy';
+        if (key === 'is_generators_backup') return 'Generators & Backup';
+        if (key === 'is_environmental_specialty_services') return 'Environmental & Specialty Services';
         return key.replace('is_', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
       };
 
@@ -506,68 +631,37 @@ export default function ProfilePage() {
           {isEditingDetails ? (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                {Object.entries(trades)
-                  .filter(([key]) => key !== 'other')
-                  .map(([key, value]) => (
-                    <label key={key} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={value}
-                        onChange={(e) => {
-                          try {
-                            setTrades(prev => ({
-                              ...prev,
-                              [key]: e.target.checked
-                            }));
-                          } catch (err) {
-                            console.error('Error updating trade state:', err);
-                          }
-                        }}
-                        className="rounded border-primary/20"
-                      />
-                      <span className="text-sm">
-                        {formatTradeName(key)}
-                      </span>
-                    </label>
-                  ))}
-              </div>
-              <div>
-                <div className="text-sm font-medium text-primary mb-2">Other Trades</div>
-                <div className="space-y-2">
-                  <div className="flex flex-wrap gap-2">
-                    {trades.other.map((trade, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded-md text-sm"
-                      >
-                        <span>{trade}</span>
-                        <button
-                          onClick={() => handleRemoveOtherTrade(trade)}
-                          className="text-primary hover:text-primary/80"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <input
-                    type="text"
-                    value={newOtherTrade}
-                    onChange={(e) => setNewOtherTrade(e.target.value)}
-                    onKeyDown={handleAddOtherTrade}
-                    placeholder="Type and press Enter to add another trade"
-                    className="w-full p-2 border rounded-md text-sm"
-                  />
-                </div>
+                {Object.entries(trades).map(([key, value]) => (
+                  <label key={key} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={value}
+                      onChange={(e) => {
+                        try {
+                          setTrades(prev => ({
+                            ...prev,
+                            [key]: e.target.checked
+                          }));
+                        } catch (err) {
+                          console.error('Error updating trade state:', err);
+                        }
+                      }}
+                      className="rounded border-primary/20"
+                    />
+                    <span className="text-sm">
+                      {formatTradeName(key)}
+                    </span>
+                  </label>
+                ))}
               </div>
             </div>
           ) : (
             <div className="text-sm break-words">
-              {Object.entries(trades).some(([key, value]) => key !== 'other' && value) ? (
+              {Object.entries(trades).some(([key, value]) => value) ? (
                 <div className="space-y-2">
                   <div className="grid grid-cols-2 gap-2">
                     {Object.entries(trades)
-                      .filter(([key, value]) => key !== 'other' && value)
+                      .filter(([key, value]) => value)
                       .map(([key]) => (
                         <div key={key} className="flex items-center">
                           <span className="mr-2">•</span>
@@ -575,19 +669,6 @@ export default function ProfilePage() {
                         </div>
                       ))}
                   </div>
-                  {trades.other.length > 0 && (
-                    <div className="mt-2">
-                      <div className="text-sm font-medium text-primary mb-1">Other:</div>
-                      <div className="grid grid-cols-2 gap-2">
-                        {trades.other.map((trade, index) => (
-                          <div key={index} className="flex items-center">
-                            <span className="mr-2">•</span>
-                            {trade}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               ) : 'No trades selected'}
             </div>
@@ -667,36 +748,69 @@ export default function ProfilePage() {
     }
   };
 
-  const handleAddCoop = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && newCoop.trim()) {
-      e.preventDefault();
-      if (!editedDetails.cooperatives.includes(newCoop.trim())) {
-        setEditedDetails(prev => ({
-          ...prev,
-          cooperatives: [...prev.cooperatives, newCoop.trim()]
-        }));
-      }
-      setNewCoop('');
-    }
-  };
+  // Add a function to render cooperatives
+  const renderCooperatives = () => {
+    try {
+      const formatCooperativeName = (key: string) => {
+        const specialCases: Record<string, string> = {
+          'is_buy_board': 'Buy Board',
+          'is_tips': 'TIPS',
+          'is_choice_partners': 'Choice Partners',
+          'is_omnia_partners': 'Omnia Partners',
+          'is_sourcewell': 'Sourcewell'
+        };
+        
+        return specialCases[key] || key.replace('is_', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      };
 
-  const handleRemoveCoop = (coopToRemove: string) => {
-    setEditedDetails(prev => ({
-      ...prev,
-      cooperatives: prev.cooperatives.filter(coop => coop !== coopToRemove)
-    }));
-  };
-
-  const handleAddCert = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && newCert.trim()) {
-      e.preventDefault();
-      if (!editedDetails.certifications.includes(newCert.trim())) {
-        setEditedDetails(prev => ({
-          ...prev,
-          certifications: [...prev.certifications, newCert.trim()]
-        }));
-      }
-      setNewCert('');
+      return (
+        <div>
+          <div className="text-base font-bold text-primary mb-2 pb-1 border-b border-primary/10">Cooperatives</div>
+          {isEditingDetails ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {Object.entries(cooperatives).map(([key, value]) => (
+                <label key={key} className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={value}
+                    onChange={(e) => {
+                      try {
+                        setCooperatives(prev => ({
+                          ...prev,
+                          [key]: e.target.checked
+                        }));
+                      } catch (err) {
+                        console.error('Error updating cooperative state:', err);
+                      }
+                    }}
+                    className="rounded border-primary/20"
+                  />
+                  <span className="text-sm">
+                    {formatCooperativeName(key)}
+                  </span>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm break-words">
+              {Object.entries(cooperatives).some(([_, value]) => value) ? (
+                <ul className="list-disc list-inside">
+                  {Object.entries(cooperatives)
+                    .filter(([_, value]) => value)
+                    .map(([key]) => (
+                      <li key={key}>
+                        {formatCooperativeName(key)}
+                      </li>
+                    ))}
+                </ul>
+              ) : 'No cooperatives selected'}
+            </div>
+          )}
+        </div>
+      );
+    } catch (err) {
+      console.error('Error rendering cooperatives:', err);
+      return <div className="text-sm text-red-500">Error loading cooperatives</div>;
     }
   };
 
@@ -707,24 +821,40 @@ export default function ProfilePage() {
     }));
   };
 
-  const handleAddOtherTrade = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && newOtherTrade.trim()) {
-      e.preventDefault();
-      if (!trades.other.includes(newOtherTrade.trim())) {
-        setTrades(prev => ({
-          ...prev,
-          other: [...prev.other, newOtherTrade.trim()]
-        }));
-      }
-      setNewOtherTrade('');
+  // Helper functions for certifications dropdown
+  const getFilteredCertifications = () => {
+    const searchTerm = certificationSearchQuery.toLowerCase();
+    return availableCertifications.filter(cert => 
+      cert.toLowerCase().includes(searchTerm)
+    );
+  };
+
+  const handleAddCertification = (certification: string) => {
+    if (certification.trim() && !editedDetails.certifications.includes(certification.trim())) {
+      setEditedDetails(prev => ({
+        ...prev,
+        certifications: [...prev.certifications, certification.trim()]
+      }));
+    }
+    setCertificationSearchQuery('');
+  };
+
+  const handleAddCustomCertification = () => {
+    if (newCert.trim() && !editedDetails.certifications.includes(newCert.trim())) {
+      setEditedDetails(prev => ({
+        ...prev,
+        certifications: [...prev.certifications, newCert.trim()]
+      }));
+      setNewCert('');
     }
   };
 
-  const handleRemoveOtherTrade = (tradeToRemove: string) => {
-    setTrades(prev => ({
-      ...prev,
-      other: prev.other.filter(trade => trade !== tradeToRemove)
-    }));
+  const handleCertificationToggle = (certification: string) => {
+    if (editedDetails.certifications.includes(certification)) {
+      handleRemoveCert(certification);
+    } else {
+      handleAddCertification(certification);
+    }
   };
 
   // Profile picture functions
@@ -1350,55 +1480,13 @@ export default function ProfilePage() {
                 {renderClientTypes()}
               </div>
               <div>
-                <div className="text-base font-bold text-primary mb-2 pb-1 border-b border-primary/10">Cooperatives</div>
-                {isEditingDetails ? (
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap gap-2">
-                      {editedDetails.cooperatives.map((coop, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded-md text-sm"
-                        >
-                          <span>{coop}</span>
-                          <button
-                            onClick={() => handleRemoveCoop(coop)}
-                            className="text-primary hover:text-primary/80"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                    <input
-                      type="text"
-                      value={newCoop}
-                      onChange={(e) => setNewCoop(e.target.value)}
-                      onKeyDown={handleAddCoop}
-                      placeholder="Type and press Enter to add a cooperative"
-                      className="w-full p-2 border rounded-md text-sm"
-                    />
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {publicUser?.con_coops?.length ? (
-                      publicUser.con_coops.map((coop: string, index: number) => (
-                        <div
-                          key={index}
-                          className="bg-primary/10 text-primary px-2 py-1 rounded-md text-sm"
-                        >
-                          {coop}
-                        </div>
-                      ))
-                    ) : (
-                      <span className="text-sm text-muted-foreground">No cooperatives added</span>
-                    )}
-                  </div>
-                )}
+                {renderCooperatives()}
               </div>
               <div>
                 <div className="text-base font-bold text-primary mb-2 pb-1 border-b border-primary/10">Certifications</div>
                 {isEditingDetails ? (
-                  <div className="space-y-2">
+                  <div className="space-y-4">
+                    {/* Selected Certifications Display */}
                     <div className="flex flex-wrap gap-2">
                       {editedDetails.certifications.map((cert, index) => (
                         <div
@@ -1415,14 +1503,140 @@ export default function ProfilePage() {
                         </div>
                       ))}
                     </div>
-                    <input
-                      type="text"
-                      value={newCert}
-                      onChange={(e) => setNewCert(e.target.value)}
-                      onKeyDown={handleAddCert}
-                      placeholder="Type and press Enter to add a certification"
-                      className="w-full p-2 border rounded-md text-sm"
-                    />
+
+                    {/* Certifications Dropdown */}
+                    <DropdownMenu open={isCertificationDropdownOpen} onOpenChange={setIsCertificationDropdownOpen}>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 border-dashed w-full justify-start"
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Certifications
+                          {editedDetails.certifications.length > 0 && (
+                            <>
+                              <span className="mx-2 h-4 w-px bg-border" />
+                              <Badge
+                                variant="secondary"
+                                className="rounded-sm px-1 font-normal"
+                              >
+                                {editedDetails.certifications.length} selected
+                              </Badge>
+                            </>
+                          )}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent 
+                        className="w-80"
+                        onInteractOutside={(e) => {
+                          // Prevent closing when clicking the input
+                          if (e.target instanceof HTMLElement && e.target.closest('input')) {
+                            e.preventDefault();
+                          }
+                        }}
+                      >
+                        <DropdownMenuSeparator />
+                        
+                        {/* Search input */}
+                        <div className="px-2 py-2">
+                          <div className="relative">
+                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder="Search certifications..."
+                              value={certificationSearchQuery}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                setCertificationSearchQuery(e.target.value);
+                              }}
+                              className="pl-8"
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => {
+                                e.stopPropagation();
+                                // Prevent dropdown from closing on Escape
+                                if (e.key === 'Escape') {
+                                  e.preventDefault();
+                                }
+                              }}
+                              onFocus={(e) => e.target.select()}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Available certifications list */}
+                        <div className="max-h-[300px] overflow-y-auto">
+                          {getFilteredCertifications().map((certification) => (
+                            <DropdownMenuCheckboxItem
+                              key={certification}
+                              checked={editedDetails.certifications.includes(certification)}
+                              onCheckedChange={() => handleCertificationToggle(certification)}
+                              onSelect={(e) => e.preventDefault()}
+                            >
+                              {certification}
+                            </DropdownMenuCheckboxItem>
+                          ))}
+                        </div>
+
+                        {/* Custom certification input */}
+                        <DropdownMenuSeparator />
+                        <div className="px-2 py-2">
+                          <div className="text-xs text-muted-foreground mb-2">Add custom certification:</div>
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Enter custom certification..."
+                              value={newCert}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                setNewCert(e.target.value);
+                              }}
+                              onKeyDown={(e) => {
+                                e.stopPropagation();
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleAddCustomCertification();
+                                }
+                                // Prevent dropdown from closing on Escape
+                                if (e.key === 'Escape') {
+                                  e.preventDefault();
+                                }
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex-1"
+                            />
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddCustomCertification();
+                              }}
+                              disabled={!newCert.trim()}
+                            >
+                              Add
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Clear all button */}
+                        {editedDetails.certifications.length > 0 && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600 cursor-pointer"
+                              onClick={() => {
+                                setEditedDetails(prev => ({
+                                  ...prev,
+                                  certifications: []
+                                }));
+                                setCertificationSearchQuery('');
+                                setNewCert('');
+                              }}
+                            >
+                              Clear all
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 ) : (
                   <div className="flex flex-wrap gap-2">

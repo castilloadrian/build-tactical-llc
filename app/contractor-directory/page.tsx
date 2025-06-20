@@ -74,7 +74,28 @@ const TRADE_LABELS = {
   is_gymfloor: 'Gym Floor',
   is_pool: 'Pool',
   is_security: 'Security',
-  is_it: 'IT'
+  is_it: 'IT',
+  is_fire: 'Fire Protection',
+  is_masonry: 'Masonry',
+  is_construction_management: 'Construction Management',
+  is_sitework_civil: 'Sitework Civil',
+  is_metals_welding: 'Metals & Welding',
+  is_wood_carpentry: 'Wood & Carpentry',
+  is_thermal_moisture_protection: 'Thermal & Moisture Protection',
+  is_doors_windows_glazing: 'Doors, Windows & Glazing',
+  is_finishes: 'Finishes',
+  is_solar_energy: 'Solar Energy',
+  is_generators_backup: 'Generators & Backup Power',
+  is_environmental_specialty_services: 'Environmental Specialty Services'
+} as const;
+
+// Cooperative labels for display
+const COOPERATIVE_LABELS = {
+  is_buy_board: 'Buy Board',
+  is_tips: 'TIPS',
+  is_choice_partners: 'Choice Partners',
+  is_omnia_partners: 'Omnia Partners',
+  is_sourcewell: 'Sourcewell'
 } as const;
 
 // Filter categories with fixed options
@@ -177,7 +198,13 @@ export default function ContractorDirectory() {
             email,
             proposed_org_proj,
             con_certs,
-            con_coops,
+            cooperatives:contractor_cooperatives(
+              is_buy_board,
+              is_tips,
+              is_choice_partners,
+              is_omnia_partners,
+              is_sourcewell
+            ),
             trades:contractor_trades(
               is_ge,
               is_architect,
@@ -197,7 +224,18 @@ export default function ContractorDirectory() {
               is_pool,
               is_security,
               is_it,
-              other
+              is_fire,
+              is_masonry,
+              is_construction_management,
+              is_sitework_civil,
+              is_metals_welding,
+              is_wood_carpentry,
+              is_thermal_moisture_protection,
+              is_doors_windows_glazing,
+              is_finishes,
+              is_solar_energy,
+              is_generators_backup,
+              is_environmental_specialty_services
             ),
             client_types:contractor_client_types(
               is_joc,
@@ -243,8 +281,13 @@ export default function ContractorDirectory() {
           if (contractor.con_certs) {
             contractor.con_certs.forEach((cert: string) => uniqueCerts.add(cert));
           }
-          if (contractor.con_coops) {
-            contractor.con_coops.forEach((coop: string) => uniqueCoops.add(coop));
+          if (contractor.cooperatives) {
+            // Add boolean cooperatives
+            Object.entries(contractor.cooperatives).forEach(([key, value]) => {
+              if (key.startsWith('is_') && value === true) {
+                uniqueCoops.add(COOPERATIVE_LABELS[key as keyof typeof COOPERATIVE_LABELS]);
+              }
+            });
           }
           if (contractor.trades) {
             // Add boolean trades
@@ -312,6 +355,17 @@ export default function ContractorDirectory() {
           }
         }
 
+        // Get active cooperatives
+        const activeCooperatives: string[] = [];
+        if (isAuthed && contractor.cooperatives) {
+          // Add boolean cooperatives
+          Object.entries(contractor.cooperatives).forEach(([key, value]) => {
+            if (key.startsWith('is_') && value === true) {
+              activeCooperatives.push(COOPERATIVE_LABELS[key as keyof typeof COOPERATIVE_LABELS]);
+            }
+          });
+        }
+
         return {
           id: contractor.id,
           full_name: contractor.full_name,
@@ -322,7 +376,7 @@ export default function ContractorDirectory() {
           trades: isAuthed ? activeTrades : [],
           certifications: isAuthed ? (contractor.con_certs || []) : [],
           client_types: isAuthed ? activeClientTypes : [],
-          cooperatives: isAuthed ? (contractor.con_coops || []) : [],
+          cooperatives: isAuthed ? activeCooperatives : [],
           projects: contractor.projects?.map((proj: any) => ({
             id: proj.project.id,
             name: proj.project.name,
@@ -606,27 +660,32 @@ export default function ContractorDirectory() {
           {filteredContractors.map((contractor) => (
             <Card
               key={contractor.id}
-              className="border-border hover:shadow-lg transition-all duration-300 hover:border-accent/20"
+              className="border-border hover:shadow-lg transition-all duration-300 hover:border-accent/20 overflow-hidden"
             >
+              {/* Full-width profile image */}
+              <div className="relative h-48 bg-muted">
+                {contractor.profile_picture_url ? (
+                  <img
+                    src={contractor.profile_picture_url}
+                    alt={`${contractor.full_name || 'Contractor'} profile picture`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-accent/10 flex items-center justify-center">
+                    <div className="text-center">
+                      <Users className="h-12 w-12 text-accent mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">No profile picture</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <CardHeader className="pb-4">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <Avatar className="h-12 w-12 flex-shrink-0">
-                        <AvatarImage 
-                          src={contractor.profile_picture_url || undefined} 
-                          alt={`${contractor.full_name || 'Contractor'} profile picture`} 
-                        />
-                        <AvatarFallback className="bg-accent/10 text-accent">
-                          {contractor.full_name?.charAt(0) || <Users className="h-6 w-6" />}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0">
-                        <CardTitle className="text-lg leading-tight">
-                          {contractor.full_name || 'Unnamed Contractor'}
-                        </CardTitle>
-                      </div>
-                    </div>
+                    <CardTitle className="text-lg leading-tight mb-2">
+                      {contractor.full_name || 'Unnamed Contractor'}
+                    </CardTitle>
                     <div className={`flex items-center gap-2 text-sm text-muted-foreground ${!isAuthenticated ? 'blur-sm' : ''}`}>
                       <Mail className="h-4 w-4 flex-shrink-0" />
                       <span className="truncate">
