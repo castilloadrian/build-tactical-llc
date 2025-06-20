@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight, Building2, Users, BarChart3, Shield, CheckCircle, Target, Zap, Database, Globe, Clock, Award, TrendingUp } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 
 
@@ -234,7 +235,7 @@ function WeatherWidget() {
   };
 
   return (
-    <Card className="w-full sm:w-64 border-border hover:shadow-lg transition-shadow backdrop-blur-sm bg-background/80">
+    <Card className="w-full max-w-md border-border hover:shadow-lg transition-shadow backdrop-blur-sm bg-background/80" style={{ width: '100%', maxWidth: '28rem' }}>
       <CardContent className="p-6 text-center">
         <div className="text-sm text-muted-foreground mb-3">
           {location?.city || 'Loading location...'}
@@ -268,10 +269,14 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 py-8 md:py-16 min-h-[calc(100vh-200px)] flex items-center">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center w-full">
             <div className="animate-fade-in-up">
-              <div className="inline-flex items-center px-3 py-1 rounded-full bg-accent/10 text-accent text-sm font-medium mb-6">
-                <Target className="w-4 h-4 mr-2" />
-                Connecting Organizations & Industry
+              {/* Veteran Owned Badge */}
+              <div className="inline-flex items-center px-4 py-2 rounded-full bg-red-600/10 text-red-600 text-sm font-semibold mb-6 border border-red-600/20">
+                <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" clipRule="evenodd" />
+                </svg>
+                Veteran Owned Business
               </div>
+              
               <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-4 md:mb-6 text-foreground leading-tight">
                 Bridging Contractors and{" "}
                 <span className="text-accent bg-gradient-to-r from-accent to-accent/80 bg-clip-text text-transparent">
@@ -297,8 +302,21 @@ export default function Home() {
               </div>
             </div>
             
-            <div className="animate-fade-in-up [animation-delay:200ms] opacity-0 [animation-fill-mode:forwards] mt-8 lg:mt-0 flex justify-center lg:justify-end">
-              <div className="transition-all duration-300 hover:scale-105 hover:-translate-y-2 hover:shadow-lg">
+            <div className="animate-fade-in-up [animation-delay:200ms] opacity-0 [animation-fill-mode:forwards] mt-8 lg:mt-0 flex flex-col items-center lg:items-end gap-6">
+              {/* Hero Image */}
+              <div className="relative w-full max-w-md aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105">
+                <Image
+                  src="/main.jpg"
+                  alt="Construction and building projects"
+                  fill
+                  className="object-cover"
+                  priority
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+              </div>
+              
+              {/* Weather Widget */}
+              <div className="w-full max-w-md transition-all duration-300 hover:scale-105 hover:-translate-y-2 hover:shadow-lg">
                 <WeatherWidget />
               </div>
             </div>
@@ -339,13 +357,30 @@ export default function Home() {
 
         {/* Features Section */}
         <div className="py-20 max-w-7xl mx-auto px-4">
-          <div className="text-center mb-16 animate-fade-in-up [animation-delay:700ms] opacity-0 [animation-fill-mode:forwards]">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
-              Powerful Tools for <span className="text-accent">Project Success</span>
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Everything you need to connect, collaborate, and complete projects efficiently
-            </p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-16">
+            <div className="animate-fade-in-up [animation-delay:700ms] opacity-0 [animation-fill-mode:forwards]">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
+                Powerful Tools for <span className="text-accent">Project Success</span>
+              </h2>
+              <p className="text-xl text-muted-foreground leading-relaxed">
+                Everything you need to connect, collaborate, and complete projects efficiently. 
+                Our comprehensive platform provides the tools and insights that drive successful 
+                project outcomes.
+              </p>
+            </div>
+            
+            {/* Features Image */}
+            <div className="animate-fade-in-up [animation-delay:800ms] opacity-0 [animation-fill-mode:forwards] flex justify-center lg:justify-end">
+              <div className="relative w-full max-w-lg aspect-[3/2] rounded-2xl overflow-hidden shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105">
+                <Image
+                  src="/scaffolding.jpg"
+                  alt="Construction scaffolding and project management"
+                  fill
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -409,7 +444,20 @@ export default function Home() {
         <div className="bg-gradient-to-br from-accent/5 to-accent/10 py-20 border-y border-accent/10">
           <div className="max-w-7xl mx-auto px-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              <div className="animate-fade-in-up [animation-delay:1400ms] opacity-0 [animation-fill-mode:forwards]">
+              {/* Benefits Image */}
+              <div className="animate-fade-in-up [animation-delay:1400ms] opacity-0 [animation-fill-mode:forwards] flex justify-center lg:justify-start order-2 lg:order-1">
+                <div className="relative w-full max-w-md aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105">
+                  <Image
+                    src="/flag.jpg"
+                    alt="American flag representing local business and national reach"
+                    fill
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                </div>
+              </div>
+              
+              <div className="animate-fade-in-up [animation-delay:1500ms] opacity-0 [animation-fill-mode:forwards] order-1 lg:order-2">
                 <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
                   Why Choose <span className="text-accent">Build Tactical</span>?
                 </h2>
@@ -443,39 +491,42 @@ export default function Home() {
                   ))}
                 </div>
               </div>
-              
-              <div className="animate-fade-in-up [animation-delay:1500ms] opacity-0 [animation-fill-mode:forwards]">
-                <div className="bg-gradient-to-br from-background/80 to-background/60 p-8 rounded-2xl backdrop-blur-sm border border-accent/20">
-                  <h3 className="text-xl font-semibold mb-6 text-foreground">Ready to Get Started?</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                      <span className="text-muted-foreground">Free consultation available</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                      <span className="text-muted-foreground">No setup fees or hidden costs</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                      <span className="text-muted-foreground">24/7 support and training</span>
-                    </div>
-                  </div>
-                  <Link href="/contact" className="block mt-6">
-                    <Button className="w-full bg-accent hover:bg-accent/90 text-white">
-                      Schedule a Demo
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Ready to Get Started Section */}
+        <div className="py-16 max-w-7xl mx-auto px-4">
+          <div className="animate-fade-in-up [animation-delay:1600ms] opacity-0 [animation-fill-mode:forwards] flex justify-center">
+            <div className="bg-gradient-to-br from-background/80 to-background/60 p-8 rounded-2xl backdrop-blur-sm border border-accent/20 shadow-xl max-w-md w-full">
+              <h3 className="text-xl font-semibold mb-6 text-foreground text-center">Ready to Get Started?</h3>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <span className="text-muted-foreground">Free consultation available</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <span className="text-muted-foreground">No setup fees or hidden costs</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <span className="text-muted-foreground">24/7 support and training</span>
                 </div>
               </div>
+              <Link href="/contact" className="block mt-6">
+                <Button className="w-full bg-accent hover:bg-accent/90 text-white">
+                  Schedule a Demo
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
 
         {/* CTA Section */}
         <div className="py-20 max-w-7xl mx-auto px-4 text-center">
-          <div className="animate-fade-in-up [animation-delay:1600ms] opacity-0 [animation-fill-mode:forwards]">
+          <div className="animate-fade-in-up [animation-delay:1700ms] opacity-0 [animation-fill-mode:forwards]">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
               Ready to Transform Your Project Management?
             </h2>
