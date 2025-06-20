@@ -30,22 +30,139 @@ function AnimatedCounter({ end, duration = 2000, suffix = "" }: { end: number; d
 function WeatherWidget() {
   const [weather, setWeather] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [location, setLocation] = useState<{ latitude: number; longitude: number; city: string } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+
+  // Function to get city name from coordinates using reverse geocoding
+  const getCityFromCoordinates = async (latitude: number, longitude: number): Promise<string> => {
+    try {
+      // Use the correct Open-Meteo geocoding endpoint for reverse geocoding
+      const response = await fetch(
+        `https://api.open-meteo.com/v1/geocoding?latitude=${latitude}&longitude=${longitude}&count=1&language=en`
+      );
+      const data = await response.json();
+      
+      if (data.results && data.results.length > 0) {
+        const result = data.results[0];
+        // Try different property combinations for the city name
+        const cityName = result.name || result.city || result.locality || result.place || 'Unknown City';
+        const countryCode = result.country_code?.toUpperCase() || result.country || '';
+        return countryCode ? `${cityName}, ${countryCode}` : cityName;
+      }
+      
+      // If no results, try alternative geocoding service
+      const alternativeResponse = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1`
+      );
+      const alternativeData = await alternativeResponse.json();
+      
+      if (alternativeData.display_name) {
+        const parts = alternativeData.display_name.split(', ');
+        const city = parts[0] || 'Unknown City';
+        const state = parts[1] || '';
+        const country = parts[parts.length - 1] || '';
+        return state ? `${city}, ${state}` : `${city}, ${country}`;
+      }
+      
+      return 'Unknown Location';
+    } catch (error) {
+      console.error('Error getting city name:', error);
+      return 'Unknown Location';
+    }
+  };
+
+  // Function to get user's location
+  const getUserLocation = (): Promise<{ latitude: number; longitude: number }> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Geolocation is not supported by this browser'));
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (error) => {
+          reject(error);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000, // 5 minutes
+        }
+      );
+    });
+  };
 
   useEffect(() => {
-    async function fetchWeather() {
+    async function initializeWeather() {
       try {
-        const res = await fetch(
-          "https://api.open-meteo.com/v1/forecast?latitude=26.2034&longitude=-98.2300&current_weather=true&temperature_unit=fahrenheit"
+        // Try to get user's location
+        const coords = await getUserLocation();
+        
+        const city = await getCityFromCoordinates(coords.latitude, coords.longitude);
+        
+        setLocation({
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          city: city,
+        });
+
+        // Fetch weather for user's location
+        const weatherRes = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${coords.latitude}&longitude=${coords.longitude}&current_weather=true&temperature_unit=fahrenheit`
         );
-        const data = await res.json();
-        setWeather(data.current_weather);
-      } catch (e) {
-        setWeather(null);
+        const weatherData = await weatherRes.json();
+        setWeather(weatherData.current_weather);
+      } catch (error) {
+        console.error('Error getting location or weather:', error);
+        
+        // Provide specific error messages based on the error type
+        let errorMessage = 'Using default location';
+        if (error instanceof GeolocationPositionError) {
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = 'Location access denied - using default';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = 'Location unavailable - using default';
+              break;
+            case error.TIMEOUT:
+              errorMessage = 'Location request timed out - using default';
+              break;
+            default:
+              errorMessage = 'Location error - using default';
+          }
+        }
+        
+        // Fallback to McAllen, TX if geolocation fails
+        setLocationError(errorMessage);
+        setLocation({
+          latitude: 26.2034,
+          longitude: -98.2300,
+          city: 'McAllen, TX',
+        });
+
+        try {
+          const fallbackRes = await fetch(
+            "https://api.open-meteo.com/v1/forecast?latitude=26.2034&longitude=-98.2300&current_weather=true&temperature_unit=fahrenheit"
+          );
+          const fallbackData = await fallbackRes.json();
+          setWeather(fallbackData.current_weather);
+        } catch (fallbackError) {
+          console.error('Fallback weather fetch failed:', fallbackError);
+          setWeather(null);
+        }
       } finally {
         setLoading(false);
       }
     }
-    fetchWeather();
+
+    initializeWeather();
   }, []);
 
   const codeToIcon = (code: number) => {
@@ -119,7 +236,12 @@ function WeatherWidget() {
   return (
     <Card className="w-full sm:w-64 border-border hover:shadow-lg transition-shadow backdrop-blur-sm bg-background/80">
       <CardContent className="p-6 text-center">
-        <div className="text-sm text-muted-foreground mb-3">McAllen, TX</div>
+        <div className="text-sm text-muted-foreground mb-3">
+          {location?.city || 'Loading location...'}
+          {locationError && (
+            <div className="text-xs text-orange-500 mt-1">{locationError}</div>
+          )}
+        </div>
         {loading ? (
           <div className="text-muted-foreground">Loading...</div>
         ) : weather ? (
