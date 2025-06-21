@@ -280,12 +280,11 @@ export default function Home() {
               <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-4 md:mb-6 text-foreground leading-tight">
                 Bridging Contractors and{" "}
                 <span className="text-accent bg-gradient-to-r from-accent to-accent/80 bg-clip-text text-transparent">
-                  Local Organization Projects
+                  Local Construction Projects
                 </span>
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground mb-6 md:mb-8 leading-relaxed">
-                Build Tactical LLC helps you make sense of your data with powerful analytics,
-                real-time synchronization of data, and offers directories of contractors and organizations.
+              We facilitate collaboration between local contractors and government agencies with job order contracting programs and provide access to active bids. We also connect general contractors with local subcontractors and assist private entities in finding qualified contractors for their projects.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link href="/learn-more">
@@ -387,20 +386,20 @@ export default function Home() {
             {[
               {
                 icon: BarChart3,
-                title: "Advanced Analytics",
-                description: "Real-time insights and data visualization to track project performance and identify opportunities.",
+                title: "Project Management",
+                description: "Easily organize, view, and locate projects contracted through this website on your profile.",
                 delay: "800ms"
               },
               {
                 icon: Database,
-                title: "Data Synchronization",
-                description: "Seamless real-time sync across all platforms ensuring everyone works with the latest information.",
+                title: "Contractor Directory",
+                description: "Access a detailed with contractor contact info, trade expertise, certifications, and memberships.",
                 delay: "900ms"
               },
               {
                 icon: Building2,
-                title: "Contractor Directory",
-                description: "Comprehensive database of qualified contractors with ratings, capabilities, and availability.",
+                title: "Filterable Search",
+                description: "Quickly search by trade, company, or membership to find contractors that match project needs.",
                 delay: "1000ms"
               },
               {
@@ -417,8 +416,8 @@ export default function Home() {
               },
               {
                 icon: Zap,
-                title: "Reliable Data",
-                description: "Real time data managed by the organizations and contractors",
+                title: "Dashboard Analytics",
+                description: "Fully powered dashboard for contractors to track their project status, attach documents, and facilitate team communication.",
                 delay: "1300ms"
               }
             ].map((feature, index) => (
