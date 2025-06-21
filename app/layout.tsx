@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Navigation } from "@/components/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import "./globals.css";
 import { createClient } from "@/utils/supabase/server";
 import { Toaster } from 'sonner'
@@ -48,7 +49,16 @@ export default async function RootLayout({
                 <div className="w-full max-w-5xl flex items-center p-3 px-5 text-sm">
                   {/* Logo - Left */}
                   <div className="flex items-center font-semibold text-accent">
-                    <Link href={"/"}>Build Tactical LLC</Link>
+                    <Link href={"/"} className="flex items-center">
+                      <Image
+                        src="/build-tactical-llc-logo.png"
+                        alt="Build Tactical LLC Logo"
+                        width={32}
+                        height={32}
+                        className="mr-2"
+                      />
+                      Build Tactical LLC
+                    </Link>
                   </div>
                   
                   {/* Navigation Links - Center */}

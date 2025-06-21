@@ -22,13 +22,13 @@ export default function Pricing() {
       {/* Pricing Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto animate-fade-in-up [animation-delay:400ms] opacity-0 [animation-fill-mode:forwards]">
         
-        {/* 1 Day Free Card */}
+        {/* One Day Free Access Card */}
         <Card className="border-border hover:shadow-lg transition-all duration-300 relative h-full flex flex-col">
           <CardHeader className="text-center">
             <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Clock className="h-8 w-8 text-accent" />
             </div>
-            <CardTitle className="text-2xl">1 Day Trial</CardTitle>
+            <CardTitle className="text-2xl">One Day Free Access</CardTitle>
             <div className="py-4">
               <div className="text-4xl font-bold text-foreground">Free</div>
               <p className="text-sm text-muted-foreground mt-2">Try us for 24 hours</p>
@@ -61,7 +61,7 @@ export default function Pricing() {
           </CardContent>
         </Card>
 
-        {/* 7 Days $25 Card */}
+        {/* Monthly Card */}
         <Card className="border-accent hover:shadow-xl transition-all duration-300 relative overflow-hidden h-full flex flex-col">
           {/* Popular Badge */}
           <div className="absolute top-0 right-0 bg-accent text-white px-3 py-1 text-xs font-medium rounded-bl-lg">
@@ -72,19 +72,19 @@ export default function Pricing() {
             <div className="w-16 h-16 bg-accent/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Star className="h-8 w-8 text-accent" />
             </div>
-            <CardTitle className="text-2xl">7 Days</CardTitle>
+            <CardTitle className="text-2xl">Monthly</CardTitle>
             <div className="py-4">
               <div className="text-4xl font-bold text-foreground">
-                $25
+                $125<span className="text-lg font-normal text-muted-foreground">/month</span>
               </div>
-              <p className="text-sm text-muted-foreground mt-2">Perfect for short projects</p>
+              <p className="text-sm text-muted-foreground mt-2">Flexible monthly billing</p>
             </div>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col">
             <ul className="space-y-3 mb-8 flex-1">
               <li className="flex items-center gap-3">
                 <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                <span className="text-sm">Full access for 7 days</span>
+                <span className="text-sm">Full access every month</span>
               </li>
               <li className="flex items-center gap-3">
                 <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
@@ -96,7 +96,7 @@ export default function Pricing() {
               </li>
               <li className="flex items-center gap-3">
                 <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                <span className="text-sm">Instant activation</span>
+                <span className="text-sm">Cancel anytime</span>
               </li>
             </ul>
             <Link href="/sign-up">
@@ -107,18 +107,18 @@ export default function Pricing() {
           </CardContent>
         </Card>
 
-        {/* 6 Months Card */}
+        {/* 6-Month Prepaid Card */}
         <Card className="border-border hover:shadow-lg transition-all duration-300 relative h-full flex flex-col">
           <CardHeader className="text-center">
             <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Calendar className="h-8 w-8 text-accent" />
             </div>
-            <CardTitle className="text-2xl">6 Months</CardTitle>
+            <CardTitle className="text-2xl">6-Month Prepaid</CardTitle>
             <div className="py-4">
               <div className="text-3xl font-bold text-foreground">
-                $300<span className="text-lg font-normal text-muted-foreground">/month</span>
+                $600
               </div>
-              <p className="text-sm text-muted-foreground mt-1">$1,800 total - Pay in full</p>
+              <p className="text-sm text-muted-foreground mt-1">$100/month - Pay in full</p>
               <div className="mt-2">
                 <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
                   Best Value
@@ -142,12 +142,12 @@ export default function Pricing() {
               </li>
               <li className="flex items-center gap-3">
                 <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                <span className="text-sm">Instant activation</span>
+                <span className="text-sm">Save $150 vs monthly</span>
               </li>
             </ul>
             <Link href="/sign-up">
               <Button variant="outline" className="w-full hover:bg-accent hover:text-white transition-colors">
-                Choose 6 Months
+                Choose 6-Month Plan
               </Button>
             </Link>
           </CardContent>

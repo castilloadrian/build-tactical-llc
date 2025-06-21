@@ -401,7 +401,7 @@ export default function ProjectProposalsPage() {
               onClick={() => setIsCreateModalOpen(true)}
             >
               <Plus className="h-4 w-4" />
-              Create Proposal
+              Create Project
             </Button>
           </div>
         )}

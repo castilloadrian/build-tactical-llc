@@ -29,6 +29,7 @@ export default function OrganizationDirectory() {
         const { data, error } = await supabase
           .from('organizations')
           .select('*')
+          .eq('is_private', false)
           .order('name');
 
         if (error) throw error;
@@ -78,27 +79,32 @@ export default function OrganizationDirectory() {
           {organizations.map((org) => (
             <Card
               key={org.id}
-              className="border-border hover:shadow-lg transition-all duration-300 hover:border-accent/20"
+              className="border-border hover:shadow-lg transition-all duration-300 hover:border-accent/20 overflow-hidden"
             >
+              {/* Full-width profile image */}
+              <div className="relative h-48 bg-muted">
+                {org.organization_picture_url ? (
+                  <img
+                    src={org.organization_picture_url}
+                    alt={`${org.name || 'Organization'} picture`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-accent/10 flex items-center justify-center">
+                    <div className="text-center">
+                      <Building2 className="h-12 w-12 text-accent mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">No organization picture</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <CardHeader className="pb-4">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <Avatar className="h-12 w-12 flex-shrink-0">
-                        <AvatarImage 
-                          src={org.organization_picture_url || undefined} 
-                          alt={`${org.name || 'Organization'} picture`} 
-                        />
-                        <AvatarFallback className="bg-accent/10 text-accent">
-                          {org.name?.charAt(0) || <Building2 className="h-6 w-6" />}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0">
-                        <CardTitle className="text-lg leading-tight">
-                          {org.name || 'Unnamed Organization'}
-                        </CardTitle>
-                      </div>
-                    </div>
+                    <CardTitle className="text-lg leading-tight mb-2">
+                      {org.name || 'Unnamed Organization'}
+                    </CardTitle>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="h-4 w-4 flex-shrink-0" />
                       <span>Established: {new Date(org.created_at).toLocaleDateString()}</span>

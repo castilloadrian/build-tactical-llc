@@ -158,7 +158,7 @@ export function CreateProposalModal({
             onClick={handleSubmit} 
             disabled={!isFormValid}
           >
-            Create Proposal
+            Create Project
           </Button>
         </DialogFooter>
       </DialogContent>
