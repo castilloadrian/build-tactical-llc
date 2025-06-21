@@ -95,7 +95,7 @@ export default async function Signup(props: {
                   >
                     <option value="">Select your role</option>
                     <option value="Contractor">Contractor</option>
-                    <option value="Organization">Organization</option>
+                    <option value="Organization">Government Organization</option>
                   </select>
                 </div>
                 
