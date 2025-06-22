@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
+import { hasUserAccess, hasProjectProposalsAccess } from "@/utils/subscription";
 
 export const updateSession = async (request: NextRequest) => {
   // This `try/catch` block is only here for the interactive tutorial.
@@ -55,45 +56,20 @@ export const updateSession = async (request: NextRequest) => {
       return NextResponse.redirect(new URL("/sign-in", request.url));
     }
 
-    // Check subscription status for dashboard access
+    // Check access for protected routes
     if (isProtectedRoute && !user.error && user.data.user) {
-      // Check if user has an active subscription
-      const { data: subscription, error: subscriptionError } = await supabase
-        .from('user_subscriptions')
-        .select('status, plan_type, trial_expires_at, subscription_expires_at')
-        .eq('user_id', user.data.user.id)
-        .eq('status', 'active')
-        .single();
-
-      if (subscriptionError && subscriptionError.code !== 'PGRST116') {
-        console.error('Error checking subscription status:', subscriptionError);
+      let hasAccess = false;
+      
+      // Project proposals require stricter access (subscription OR Org Owner with organizations)
+      if (request.nextUrl.pathname.startsWith('/project-proposals')) {
+        hasAccess = await hasProjectProposalsAccess(user.data.user.id);
+      } else {
+        // Dashboard and projects use general access (subscription OR Org Owner)
+        hasAccess = await hasUserAccess(user.data.user.id);
       }
-
-      // If no active subscription found, redirect to pricing
-      if (!subscription) {
+      
+      if (!hasAccess) {
         return NextResponse.redirect(new URL("/pricing", request.url));
-      }
-
-      // Check if trial has expired
-      if (subscription.plan_type === 'free-trial' && subscription.trial_expires_at) {
-        const trialExpiresAt = new Date(subscription.trial_expires_at);
-        const now = new Date();
-        
-        if (now > trialExpiresAt) {
-          // Trial has expired, redirect to pricing
-          return NextResponse.redirect(new URL("/pricing", request.url));
-        }
-      }
-
-      // Check if paid subscription has expired
-      if (subscription.subscription_expires_at) {
-        const subscriptionExpiresAt = new Date(subscription.subscription_expires_at);
-        const now = new Date();
-        
-        if (now > subscriptionExpiresAt) {
-          // Subscription has expired, redirect to pricing
-          return NextResponse.redirect(new URL("/pricing", request.url));
-        }
       }
     }
 

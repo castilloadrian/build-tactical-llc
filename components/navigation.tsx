@@ -13,7 +13,7 @@ import Link from "next/link";
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useState, useEffect } from 'react';
-import { getUserSubscriptionStatus } from "@/utils/subscription";
+import { getUserSubscriptionStatus, hasUserAccess } from "@/utils/subscription";
 
 interface NavigationProps {
   user: SupabaseUser | null;
@@ -23,6 +23,8 @@ export function Navigation({ user }: NavigationProps) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [hasOrganizations, setHasOrganizations] = useState(false);
   const supabase = createClientComponentClient();
 
   useEffect(() => {
@@ -32,6 +34,8 @@ export function Navigation({ user }: NavigationProps) {
         setIsAdmin(false);
         setProfilePictureUrl(null);
         setHasActiveSubscription(false);
+        setUserRole(null);
+        setHasOrganizations(false);
         return;
       }
 
@@ -43,10 +47,21 @@ export function Navigation({ user }: NavigationProps) {
       
       setIsAdmin(userData?.role === 'Admin');
       setProfilePictureUrl(userData?.profile_picture_url);
+      setUserRole(userData?.role);
       
-      // Check subscription status only for logged-in users
-      const subscriptionStatus = await getUserSubscriptionStatus(user.id);
-      setHasActiveSubscription(subscriptionStatus.hasActiveSubscription);
+      // Check access for logged-in users (subscription OR Org Owner with organizations)
+      const hasAccess = await hasUserAccess(user.id);
+      setHasActiveSubscription(hasAccess);
+      
+      // For Org Owners, check if they have organizations
+      if (userData?.role === 'Org Owner') {
+        const { data: userOrgs } = await supabase
+          .from('user-org')
+          .select('org_id')
+          .eq('user_id', user.id);
+        
+        setHasOrganizations(Boolean(userOrgs && userOrgs.length > 0));
+      }
     }
     
     fetchUserData();
@@ -112,7 +127,7 @@ export function Navigation({ user }: NavigationProps) {
                   Profile
                 </Button>
               </Link>
-              {hasActiveSubscription && (
+              {(hasActiveSubscription || (userRole === 'Org Owner' && hasOrganizations)) && (
                 <Link href="/project-proposals">
                   <Button variant="ghost" className="w-full justify-start" size="sm">
                     <FileText className="mr-2 h-4 w-4" />

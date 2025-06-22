@@ -9,7 +9,7 @@ import { User } from '@supabase/supabase-js';
 import { Building2, Briefcase, LayoutDashboard, PieChart, Plus, Lock, CheckCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getUserSubscriptionStatus } from "@/utils/subscription";
+import { getUserSubscriptionStatus, hasUserAccess } from "@/utils/subscription";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -22,6 +22,7 @@ export default function DashboardPage() {
   const [orgsList, setOrgsList] = useState<any[]>([]);
   const [projectsList, setProjectsList] = useState<any[]>([]);
   const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
+  const [hasAccess, setHasAccess] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
@@ -113,15 +114,19 @@ export default function DashboardPage() {
       }
       setUser(user);
       
-      // Check subscription status
-      const status = await getUserSubscriptionStatus(user.id);
-      setSubscriptionStatus(status);
+      // Check access (subscription OR Org Owner with organizations)
+      const accessResult = await hasUserAccess(user.id);
+      setHasAccess(accessResult);
       
-      if (!status.hasActiveSubscription) {
-        // User doesn't have an active subscription, redirect to pricing
+      if (!accessResult) {
+        // User doesn't have access, redirect to pricing
         router.push('/pricing');
         return;
       }
+      
+      // Also check subscription status for UI purposes
+      const status = await getUserSubscriptionStatus(user.id);
+      setSubscriptionStatus(status);
       
       setLoading(false);
     };
@@ -291,14 +296,14 @@ export default function DashboardPage() {
       )}
 
       {/* Subscription Required State */}
-      {!loading && (!subscriptionStatus || !subscriptionStatus.hasActiveSubscription) && (
+      {!loading && !hasAccess && (
         <div className="max-w-4xl mx-auto text-center py-12">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <Lock className="h-8 w-8 text-red-600" />
           </div>
-          <h2 className="text-2xl font-bold mb-4">Subscription Required</h2>
+          <h2 className="text-2xl font-bold mb-4">Access Required</h2>
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-            You need an active subscription to access the dashboard. Please choose a plan to continue.
+            You need an active subscription or organization access to view the dashboard. Please choose a plan or contact your organization administrator.
           </p>
           <Button onClick={() => router.push('/pricing')} className="bg-accent hover:bg-accent/90">
             View Plans
@@ -306,8 +311,8 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Dashboard Content - Only show if user has active subscription */}
-      {!loading && subscriptionStatus && subscriptionStatus.hasActiveSubscription && (
+      {/* Dashboard Content - Only show if user has access */}
+      {!loading && hasAccess && (
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Organization Selector Card - Only show for non-contractors */}
           {orgsList.length > 0 && (

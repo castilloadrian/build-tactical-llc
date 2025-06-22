@@ -1854,128 +1854,130 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* Subscription Status Section */}
-      <div className="mb-8">
-        <h2 className="text-xl font-bold mb-4">Subscription Status</h2>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              Current Subscription
-            </CardTitle>
-            <CardDescription>
-              View your current subscription and billing information
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {subscription ? (
-              <div className="space-y-4">
-                {/* Active Subscription Info */}
-                <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                      <CreditCard className="h-5 w-5 text-green-600" />
+      {/* Subscription Status Section - Only show for non-Org Owners */}
+      {userRole !== 'Org Owner' && (
+        <div className="mb-8">
+          <h2 className="text-xl font-bold mb-4">Subscription Status</h2>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Current Subscription
+              </CardTitle>
+              <CardDescription>
+                View your current subscription and billing information
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {subscription ? (
+                <div className="space-y-4">
+                  {/* Active Subscription Info */}
+                  <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                        <CreditCard className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-green-800">
+                          {subscription.plan_type === 'free-trial' ? 'Free Trial Active' : 'Active Subscription'}
+                        </h3>
+                        <p className="text-sm text-green-700">
+                          {subscription.plan_type === 'free-trial' && 'One Day Free Access'}
+                          {subscription.plan_type === 'monthly' && 'Monthly Plan ($125/month)'}
+                          {subscription.plan_type === 'six-month' && '6-Month Prepaid Plan ($600)'}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-green-800">
-                        {subscription.plan_type === 'free-trial' ? 'Free Trial Active' : 'Active Subscription'}
-                      </h3>
-                      <p className="text-sm text-green-700">
-                        {subscription.plan_type === 'free-trial' && 'One Day Free Access'}
-                        {subscription.plan_type === 'monthly' && 'Monthly Plan ($125/month)'}
-                        {subscription.plan_type === 'six-month' && '6-Month Prepaid Plan ($600)'}
-                      </p>
-                    </div>
+                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                      {subscription.status}
+                    </Badge>
                   </div>
-                  <Badge variant="secondary" className="bg-green-100 text-green-800">
-                    {subscription.status}
-                  </Badge>
+
+                  {/* Expiration Info */}
+                  {(subscription.trial_expires_at || subscription.subscription_expires_at) && (
+                    <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <Calendar className="h-4 w-4 text-blue-600" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-blue-800">
+                          {subscription.plan_type === 'free-trial' ? 'Trial Expires' : 'Next Billing Date'}
+                        </p>
+                        <p className="text-sm text-blue-700">
+                          {new Date(subscription.trial_expires_at || subscription.subscription_expires_at!).toLocaleDateString()} at{' '}
+                          {new Date(subscription.trial_expires_at || subscription.subscription_expires_at!).toLocaleTimeString()}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Trial Warning */}
+                  {subscription.plan_type === 'free-trial' && subscription.trial_expires_at && (
+                    <div className="flex items-center gap-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <Clock className="h-4 w-4 text-yellow-600" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-yellow-800">
+                          Trial Expires Soon
+                        </p>
+                        <p className="text-sm text-yellow-700">
+                          Your free trial will expire soon. Upgrade to a paid plan to continue enjoying full access.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                    {subscription.plan_type === 'free-trial' ? (
+                      <Link href="/pricing">
+                        <Button className="w-full sm:w-auto">
+                          Upgrade to Paid Plan
+                        </Button>
+                      </Link>
+                    ) : (
+                      <>
+                        <Button variant="outline" className="w-full sm:w-auto">
+                          Manage Billing
+                        </Button>
+                        <Button variant="outline" className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:bg-red-50">
+                          Cancel Subscription
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
-
-                {/* Expiration Info */}
-                {(subscription.trial_expires_at || subscription.subscription_expires_at) && (
-                  <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <Calendar className="h-4 w-4 text-blue-600" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-blue-800">
-                        {subscription.plan_type === 'free-trial' ? 'Trial Expires' : 'Next Billing Date'}
-                      </p>
-                      <p className="text-sm text-blue-700">
-                        {new Date(subscription.trial_expires_at || subscription.subscription_expires_at!).toLocaleDateString()} at{' '}
-                        {new Date(subscription.trial_expires_at || subscription.subscription_expires_at!).toLocaleTimeString()}
-                      </p>
+              ) : (
+                <div className="space-y-4">
+                  {/* No Active Subscription */}
+                  <div className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                        <CreditCard className="h-5 w-5 text-gray-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-800">No Active Subscription</h3>
+                        <p className="text-sm text-gray-700">
+                          You don't have an active subscription. Choose a plan to get started.
+                        </p>
+                      </div>
                     </div>
+                    <Badge variant="secondary" className="bg-gray-100 text-gray-800">
+                      Inactive
+                    </Badge>
                   </div>
-                )}
 
-                {/* Trial Warning */}
-                {subscription.plan_type === 'free-trial' && subscription.trial_expires_at && (
-                  <div className="flex items-center gap-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <Clock className="h-4 w-4 text-yellow-600" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-yellow-800">
-                        Trial Expires Soon
-                      </p>
-                      <p className="text-sm text-yellow-700">
-                        Your free trial will expire soon. Upgrade to a paid plan to continue enjoying full access.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                  {subscription.plan_type === 'free-trial' ? (
+                  {/* Action Button */}
+                  <div className="pt-4">
                     <Link href="/pricing">
                       <Button className="w-full sm:w-auto">
-                        Upgrade to Paid Plan
+                        View Plans
                       </Button>
                     </Link>
-                  ) : (
-                    <>
-                      <Button variant="outline" className="w-full sm:w-auto">
-                        Manage Billing
-                      </Button>
-                      <Button variant="outline" className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:bg-red-50">
-                        Cancel Subscription
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* No Active Subscription */}
-                <div className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                      <CreditCard className="h-5 w-5 text-gray-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-800">No Active Subscription</h3>
-                      <p className="text-sm text-gray-700">
-                        You don't have an active subscription. Choose a plan to get started.
-                      </p>
-                    </div>
                   </div>
-                  <Badge variant="secondary" className="bg-gray-100 text-gray-800">
-                    Inactive
-                  </Badge>
                 </div>
-
-                {/* Action Button */}
-                <div className="pt-4">
-                  <Link href="/pricing">
-                    <Button className="w-full sm:w-auto">
-                      View Plans
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Privacy Settings Section */}
       {(userRole === 'Contractor' || userRole === 'Org Owner') && (

@@ -314,4 +314,82 @@ export async function createPaidSubscription(
     console.error('Error creating paid subscription:', error);
     return false;
   }
+}
+
+export async function hasUserAccess(userId: string): Promise<boolean> {
+  const supabase = createClient();
+  
+  try {
+    // First, check if user has an active subscription
+    const subscriptionStatus = await getUserSubscriptionStatus(userId);
+    if (subscriptionStatus.hasActiveSubscription) {
+      return true;
+    }
+    
+    // If no active subscription, check if user is an Org Owner
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .single();
+    
+    if (userError || !userData) {
+      return false;
+    }
+    
+    // Org Owners have access regardless of organizations
+    if (userData.role === 'Org Owner') {
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Error checking user access:', error);
+    return false;
+  }
+}
+
+export async function hasProjectProposalsAccess(userId: string): Promise<boolean> {
+  const supabase = createClient();
+  
+  try {
+    // First, check if user has an active subscription
+    const subscriptionStatus = await getUserSubscriptionStatus(userId);
+    if (subscriptionStatus.hasActiveSubscription) {
+      return true;
+    }
+    
+    // If no active subscription, check if user is an Org Owner with organizations
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .single();
+    
+    if (userError || !userData) {
+      return false;
+    }
+    
+    // Check if user is an Org Owner
+    if (userData.role === 'Org Owner') {
+      // Check if user has associated organizations
+      const { data: userOrgs, error: orgError } = await supabase
+        .from('user-org')
+        .select('org_id')
+        .eq('user_id', userId);
+      
+      if (orgError) {
+        console.error('Error checking user organizations:', orgError);
+        return false;
+      }
+      
+      // User has access if they are an Org Owner with at least one organization
+      return userOrgs && userOrgs.length > 0;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Error checking project proposals access:', error);
+    return false;
+  }
 } 

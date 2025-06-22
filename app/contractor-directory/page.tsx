@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { getUserSubscriptionStatus } from "@/utils/subscription";
+import { getUserSubscriptionStatus, hasUserAccess } from "@/utils/subscription";
 
 // Create a single Supabase client instance
 const supabase = createClient();
@@ -162,10 +162,10 @@ export default function ContractorDirectory() {
         setIsAuthenticated(isAuthed);
         setAuthChecked(true);
         
-        // Check subscription status for authenticated users
+        // Check access for authenticated users (subscription OR Org Owner with organizations)
         if (isAuthed && user) {
-          const subscriptionStatus = await getUserSubscriptionStatus(user.id);
-          setHasActiveSubscription(subscriptionStatus.hasActiveSubscription);
+          const hasAccess = await hasUserAccess(user.id);
+          setHasActiveSubscription(hasAccess);
         } else {
           setHasActiveSubscription(false);
         }
@@ -187,10 +187,10 @@ export default function ContractorDirectory() {
       const isAuthed = !!session?.user;
       setIsAuthenticated(isAuthed);
       
-      // Check subscription status for authenticated users
+      // Check access for authenticated users (subscription OR Org Owner with organizations)
       if (isAuthed && session?.user) {
-        const subscriptionStatus = await getUserSubscriptionStatus(session.user.id);
-        setHasActiveSubscription(subscriptionStatus.hasActiveSubscription);
+        const hasAccess = await hasUserAccess(session.user.id);
+        setHasActiveSubscription(hasAccess);
       } else {
         setHasActiveSubscription(false);
       }
