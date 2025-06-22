@@ -13,7 +13,7 @@ import Link from "next/link";
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useState, useEffect } from 'react';
-import { getUserSubscriptionStatus, hasUserAccess } from "@/utils/subscription";
+import { getUserSubscriptionStatus, hasUserAccess, hasProjectProposalsAccess } from "@/utils/subscription";
 
 interface NavigationProps {
   user: SupabaseUser | null;
@@ -49,9 +49,9 @@ export function Navigation({ user }: NavigationProps) {
       setProfilePictureUrl(userData?.profile_picture_url);
       setUserRole(userData?.role);
       
-      // Check access for logged-in users (subscription OR Org Owner with organizations)
-      const hasAccess = await hasUserAccess(user.id);
-      setHasActiveSubscription(hasAccess);
+      // Check subscription status for project proposals access
+      const subscriptionStatus = await getUserSubscriptionStatus(user.id);
+      setHasActiveSubscription(subscriptionStatus.hasActiveSubscription);
       
       // For Org Owners, check if they have organizations
       if (userData?.role === 'Org Owner') {
