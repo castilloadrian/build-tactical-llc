@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import "./globals.css";
 import { createClient } from "@/utils/supabase/server";
+import { shouldShowPricingPage, getUserSubscriptionStatus } from "@/utils/subscription";
 import { Toaster } from 'sonner'
 
 const defaultUrl = process.env.VERCEL_URL
@@ -33,6 +34,18 @@ export default async function RootLayout({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // Check if user should see pricing page
+  let showPricing = true;
+  let hasActiveSubscription = false;
+  
+  if (user) {
+    showPricing = await shouldShowPricingPage(user.id);
+    
+    // Check if user has active subscription for dashboard access
+    const subscriptionStatus = await getUserSubscriptionStatus(user.id);
+    hasActiveSubscription = subscriptionStatus.hasActiveSubscription;
+  }
 
   return (
     <html lang="en" className={geistSans.className} suppressHydrationWarning>
@@ -63,14 +76,16 @@ export default async function RootLayout({
                   
                   {/* Navigation Links - Center */}
                   <div className="flex-1 flex justify-center items-center gap-4">
-                    { user && (
+                    { user && hasActiveSubscription && (
                       <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors font-semibold">Dashboard</Link>
                     )}
                     <Link href="/contractor-directory" className="text-muted-foreground hover:text-foreground transition-colors">Contractor Directory</Link>
                     <Link href="/organization-directory" className="text-muted-foreground hover:text-foreground transition-colors">Organization Directory</Link>
                     <Link href="/learn-more" className="text-muted-foreground hover:text-foreground transition-colors">Learn More</Link>
                     <Link href="/blog" className="text-muted-foreground hover:text-foreground transition-colors">Blog</Link>
-                    <Link href="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">Pricing</Link>
+                    {showPricing && (
+                      <Link href="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">Pricing</Link>
+                    )}
                     <Link href="/contact" className="text-muted-foreground hover:text-foreground transition-colors">Contact</Link>
                   </div>
                   

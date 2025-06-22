@@ -2,11 +2,12 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CheckCircle, Star, Zap, Users, Calendar, Clock } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
-import { activateFreeTrial } from "@/utils/subscription";
+import { activateFreeTrial, hasUserHadFreeTrial } from "@/utils/subscription";
 
 // Define plan types
 type PlanType = 'free-trial' | 'monthly' | 'six-month';
@@ -77,6 +78,9 @@ export default function Pricing() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<PlanType | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successPlan, setSuccessPlan] = useState<Plan | null>(null);
+  const [hasHadTrial, setHasHadTrial] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -85,6 +89,12 @@ export default function Pricing() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         setUser(user);
+        
+        // If user is logged in, check if they've had a free trial
+        if (user) {
+          const trialUsed = await hasUserHadFreeTrial(user.id);
+          setHasHadTrial(trialUsed);
+        }
       } catch (error) {
         console.error('Error fetching user:', error);
       } finally {
@@ -124,9 +134,10 @@ export default function Pricing() {
       const success = await activateFreeTrial(user.id);
       
       if (success) {
-        // Show success message and redirect to dashboard
-        alert('Free trial activated! You now have 24 hours of full access.');
-        router.push('/dashboard');
+        // Find the plan details for the success message
+        const plan = plans.find(p => p.id === 'free-trial');
+        setSuccessPlan(plan || null);
+        setShowSuccess(true);
       } else {
         throw new Error('Failed to activate free trial');
       }
@@ -166,6 +177,11 @@ export default function Pricing() {
     }
   };
 
+  const handleSuccessClose = () => {
+    setShowSuccess(false);
+    router.push('/dashboard');
+  };
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-12">
@@ -179,6 +195,61 @@ export default function Pricing() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
+      {/* Success Dialog */}
+      <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl text-green-800">
+                  Free Trial Activated!
+                </DialogTitle>
+                <DialogDescription className="text-green-700">
+                  You now have 24 hours of full access
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-800">
+                Your free trial for <strong>{successPlan?.name}</strong> has been activated successfully!
+              </p>
+            </div>
+            
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className="h-4 w-4 text-yellow-600" />
+                <span className="font-medium text-yellow-800">Trial Expires Soon</span>
+              </div>
+              <p className="text-sm text-yellow-700">
+                Your free trial expires in 24 hours. Upgrade to a paid plan to continue enjoying full access.
+              </p>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              <Button 
+                onClick={handleSuccessClose}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                Go to Dashboard
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowSuccess(false)}
+                className="border-green-300 text-green-700 hover:bg-green-100"
+              >
+                Stay on Pricing
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Hero Section */}
       <div className="text-center mb-16 animate-fade-in-up">
         <h1 className="text-5xl font-bold mb-6 text-foreground">
@@ -195,12 +266,31 @@ export default function Pricing() {
             </p>
           </div>
         )}
+        {user && hasHadTrial && (
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg inline-block">
+            <p className="text-blue-800">
+              You've already used your free trial. Choose a paid plan to continue enjoying our services.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Pricing Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto animate-fade-in-up [animation-delay:400ms] opacity-0 [animation-fill-mode:forwards]">
+      <div className={`grid gap-6 max-w-7xl mx-auto animate-fade-in-up [animation-delay:400ms] opacity-0 [animation-fill-mode:forwards] ${
+        plans.filter(plan => !(plan.id === 'free-trial' && hasHadTrial)).length === 2
+          ? 'grid-cols-1 lg:grid-cols-2 lg:max-w-4xl'
+          : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+      }`}>
         
-        {plans.map((plan) => {
+        {plans
+          .filter(plan => {
+            // Hide free trial if user has already had one
+            if (plan.id === 'free-trial' && hasHadTrial) {
+              return false;
+            }
+            return true;
+          })
+          .map((plan) => {
           const IconComponent = plan.icon;
           return (
             <Card 
@@ -264,19 +354,6 @@ export default function Pricing() {
             </Card>
           );
         })}
-      </div>
-
-      {/* Additional Information */}
-      <div className="mt-16 text-center">
-        <h2 className="text-2xl font-bold mb-4">Questions about pricing?</h2>
-        <p className="text-muted-foreground mb-6">
-          Our team is here to help you choose the right plan for your needs.
-        </p>
-        <Link href="/contact">
-          <Button variant="outline" className="hover:bg-accent hover:text-white">
-            Contact Sales
-          </Button>
-        </Link>
       </div>
     </div>
   );

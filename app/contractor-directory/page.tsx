@@ -2,7 +2,7 @@
 
 import { createClient } from '@/utils/supabase/client';
 import { useEffect, useState } from 'react';
-import { ChevronDown, ChevronUp, Users, Mail, Briefcase, Building2, Filter, Search, Plus } from 'lucide-react';
+import { ChevronDown, ChevronUp, Users, Mail, Briefcase, Building2, Filter, Search, Plus, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { getUserSubscriptionStatus } from "@/utils/subscription";
 
 // Create a single Supabase client instance
 const supabase = createClient();
@@ -121,6 +122,8 @@ export default function ContractorDirectory() {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  const [subscriptionChecked, setSubscriptionChecked] = useState(false);
   const [activeFilters, setActiveFilters] = useState<Record<string, string[]>>({
     trades: [],
     certifications: [],
@@ -150,16 +153,29 @@ export default function ContractorDirectory() {
             console.error('Auth error:', error);
           }
           setIsAuthenticated(false);
+          setHasActiveSubscription(false);
           setAuthChecked(true);
+          setSubscriptionChecked(true);
           return;
         }
         const isAuthed = !!user;
         setIsAuthenticated(isAuthed);
         setAuthChecked(true);
+        
+        // Check subscription status for authenticated users
+        if (isAuthed && user) {
+          const subscriptionStatus = await getUserSubscriptionStatus(user.id);
+          setHasActiveSubscription(subscriptionStatus.hasActiveSubscription);
+        } else {
+          setHasActiveSubscription(false);
+        }
+        setSubscriptionChecked(true);
       } catch (error) {
         console.error('Auth check failed:', error);
         setIsAuthenticated(false);
+        setHasActiveSubscription(false);
         setAuthChecked(true);
+        setSubscriptionChecked(true);
       }
     };
 
@@ -170,6 +186,15 @@ export default function ContractorDirectory() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       const isAuthed = !!session?.user;
       setIsAuthenticated(isAuthed);
+      
+      // Check subscription status for authenticated users
+      if (isAuthed && session?.user) {
+        const subscriptionStatus = await getUserSubscriptionStatus(session.user.id);
+        setHasActiveSubscription(subscriptionStatus.hasActiveSubscription);
+      } else {
+        setHasActiveSubscription(false);
+      }
+      setSubscriptionChecked(true);
       
       // If we just logged in, fetch the data again
       if (event === 'SIGNED_IN') {
@@ -186,6 +211,35 @@ export default function ContractorDirectory() {
   const fetchContractors = async (isAuthed: boolean) => {
     setLoading(true);
     try {
+      // Determine if user should see full data (authenticated AND subscribed)
+      const shouldShowFullData = isAuthed && hasActiveSubscription;
+      
+      // First, get all user IDs with active subscriptions
+      const { data: subscribedUserIds, error: subscriptionError } = await supabase
+        .from('user_subscriptions')
+        .select('user_id')
+        .eq('status', 'active');
+      
+      if (subscriptionError) {
+        console.error('Error fetching subscribed user IDs:', subscriptionError);
+        throw subscriptionError;
+      }
+      
+      const subscribedIds = subscribedUserIds?.map(sub => sub.user_id) || [];
+      
+      // If no subscribed users, return empty array
+      if (subscribedIds.length === 0) {
+        setContractors([]);
+        setAvailableFilters({
+          certifications: [],
+          cooperatives: [],
+          trades: [],
+          client_types: []
+        });
+        setLoading(false);
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('users')
         .select(`
@@ -194,7 +248,7 @@ export default function ContractorDirectory() {
           role,
           profile_picture_url,
           is_private,
-          ${isAuthed ? `
+          ${shouldShowFullData ? `
             email,
             proposed_org_proj,
             con_certs,
@@ -263,6 +317,7 @@ export default function ContractorDirectory() {
         `)
         .eq('role', 'Contractor')
         .eq('is_private', false)
+        .in('id', subscribedIds)
         .order('full_name');
 
       if (error) {
@@ -277,7 +332,7 @@ export default function ContractorDirectory() {
       const uniqueClientTypes = new Set<string>();
       
       data?.forEach((contractor: any) => {
-        if (isAuthed) {
+        if (shouldShowFullData) {
           if (contractor.con_certs) {
             contractor.con_certs.forEach((cert: string) => uniqueCerts.add(cert));
           }
@@ -317,17 +372,17 @@ export default function ContractorDirectory() {
       });
 
       setAvailableFilters({
-        certifications: isAuthed ? Array.from(uniqueCerts).sort() : [],
-        cooperatives: isAuthed ? Array.from(uniqueCoops).sort() : [],
-        trades: isAuthed ? Array.from(uniqueTrades).sort() : [],
-        client_types: isAuthed ? Array.from(uniqueClientTypes).sort() : []
+        certifications: shouldShowFullData ? Array.from(uniqueCerts).sort() : [],
+        cooperatives: shouldShowFullData ? Array.from(uniqueCoops).sort() : [],
+        trades: shouldShowFullData ? Array.from(uniqueTrades).sort() : [],
+        client_types: shouldShowFullData ? Array.from(uniqueClientTypes).sort() : []
       });
 
       // Transform the data to match our interface
       const transformedContractors = data?.map((contractor: any) => {
         // Get active trades
         const activeTrades: string[] = [];
-        if (isAuthed && contractor.trades) {
+        if (shouldShowFullData && contractor.trades) {
           // Add boolean trades
           Object.entries(contractor.trades).forEach(([key, value]) => {
             if (key.startsWith('is_') && value === true) {
@@ -342,7 +397,7 @@ export default function ContractorDirectory() {
 
         // Get active client types
         const activeClientTypes: string[] = [];
-        if (isAuthed && contractor.client_types) {
+        if (shouldShowFullData && contractor.client_types) {
           // Add boolean client types
           Object.entries(contractor.client_types).forEach(([key, value]) => {
             if (key.startsWith('is_') && value === true) {
@@ -357,7 +412,7 @@ export default function ContractorDirectory() {
 
         // Get active cooperatives
         const activeCooperatives: string[] = [];
-        if (isAuthed && contractor.cooperatives) {
+        if (shouldShowFullData && contractor.cooperatives) {
           // Add boolean cooperatives
           Object.entries(contractor.cooperatives).forEach(([key, value]) => {
             if (key.startsWith('is_') && value === true) {
@@ -369,20 +424,20 @@ export default function ContractorDirectory() {
         return {
           id: contractor.id,
           full_name: contractor.full_name,
-          email: isAuthed ? contractor.email : null,
+          email: shouldShowFullData ? contractor.email : null,
           role: contractor.role,
-          proposed_org_proj: isAuthed ? contractor.proposed_org_proj : null,
+          proposed_org_proj: shouldShowFullData ? contractor.proposed_org_proj : null,
           profile_picture_url: contractor.profile_picture_url,
-          trades: isAuthed ? activeTrades : [],
-          certifications: isAuthed ? (contractor.con_certs || []) : [],
-          client_types: isAuthed ? activeClientTypes : [],
-          cooperatives: isAuthed ? activeCooperatives : [],
+          trades: shouldShowFullData ? activeTrades : [],
+          certifications: shouldShowFullData ? (contractor.con_certs || []) : [],
+          client_types: shouldShowFullData ? activeClientTypes : [],
+          cooperatives: shouldShowFullData ? activeCooperatives : [],
           projects: contractor.projects?.map((proj: any) => ({
             id: proj.project.id,
             name: proj.project.name,
-            description: isAuthed ? proj.project.description : null,
-            status: isAuthed ? proj.project.status : null,
-            created_at: isAuthed ? proj.project.created_at : null
+            description: shouldShowFullData ? proj.project.description : null,
+            status: shouldShowFullData ? proj.project.status : null,
+            created_at: shouldShowFullData ? proj.project.created_at : null
           }))
         };
       }) || [];
@@ -397,10 +452,10 @@ export default function ContractorDirectory() {
 
   // Initial data fetch and refetch on auth change
   useEffect(() => {
-    if (authChecked) {
+    if (authChecked && subscriptionChecked) {
       fetchContractors(isAuthenticated);
     }
-  }, [isAuthenticated, authChecked]);
+  }, [isAuthenticated, hasActiveSubscription, authChecked, subscriptionChecked]);
 
   // Filter contractors based on active filters
   const filteredContractors = contractors.filter(contractor => {
@@ -417,6 +472,10 @@ export default function ContractorDirectory() {
   const toggleExpand = (contractorId: string) => {
     if (!isAuthenticated) {
       router.push('/sign-in');
+      return;
+    }
+    if (!hasActiveSubscription) {
+      router.push('/pricing');
       return;
     }
     setExpandedContractor(prevExpanded => prevExpanded === contractorId ? null : contractorId);
@@ -444,7 +503,7 @@ export default function ContractorDirectory() {
     );
   };
 
-  if (loading || !authChecked) {
+  if (loading || !authChecked || !subscriptionChecked) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-20">
         <div className="text-center">
@@ -465,7 +524,7 @@ export default function ContractorDirectory() {
           Contractor <span className="text-accent">Directory</span>
         </h1>
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-          Browse our network of verified contractors. Each profile includes their expertise, current project assignments, and contact information.
+          Browse our network of verified, active contractors. Each profile includes their expertise, current project assignments, and contact information.
         </p>
         {!isAuthenticated && (
           <div className="mt-6">
@@ -474,6 +533,19 @@ export default function ContractorDirectory() {
             </p>
             <Button onClick={() => router.push('/sign-in')} className="bg-accent hover:bg-accent/90">
               Sign In
+            </Button>
+          </div>
+        )}
+        {isAuthenticated && !hasActiveSubscription && (
+          <div className="mt-6">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <Lock className="h-5 w-5 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                Subscribe to view contact details and project information
+              </p>
+            </div>
+            <Button onClick={() => router.push('/pricing')} className="bg-accent hover:bg-accent/90">
+              View Plans
             </Button>
           </div>
         )}
@@ -668,10 +740,10 @@ export default function ContractorDirectory() {
                   <img
                     src={contractor.profile_picture_url}
                     alt={`${contractor.full_name || 'Contractor'} profile picture`}
-                    className={`w-full h-full object-cover ${!isAuthenticated ? 'blur-md' : ''}`}
+                    className={`w-full h-full object-cover ${!hasActiveSubscription ? 'blur-md' : ''}`}
                   />
                 ) : (
-                  <div className={`w-full h-full bg-accent/10 flex items-center justify-center ${!isAuthenticated ? 'blur-sm' : ''}`}>
+                  <div className={`w-full h-full bg-accent/10 flex items-center justify-center ${!hasActiveSubscription ? 'blur-sm' : ''}`}>
                     <div className="text-center">
                       <Users className="h-12 w-12 text-accent mx-auto mb-2" />
                       <p className="text-sm text-muted-foreground">No profile picture</p>
@@ -683,13 +755,13 @@ export default function ContractorDirectory() {
               <CardHeader className="pb-4">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <CardTitle className={`text-lg leading-tight mb-2 ${!isAuthenticated ? 'blur-sm' : ''}`}>
+                    <CardTitle className={`text-lg leading-tight mb-2 ${!hasActiveSubscription ? 'blur-sm' : ''}`}>
                       {contractor.full_name || 'Unnamed Contractor'}
                     </CardTitle>
-                    <div className={`flex items-center gap-2 text-sm text-muted-foreground ${!isAuthenticated ? 'blur-sm' : ''}`}>
+                    <div className={`flex items-center gap-2 text-sm text-muted-foreground ${!hasActiveSubscription ? 'blur-sm' : ''}`}>
                       <Mail className="h-4 w-4 flex-shrink-0" />
                       <span className="truncate">
-                        {isAuthenticated ? (contractor.email || 'No email provided') : '••••••••@••••••••'}
+                        {hasActiveSubscription ? (contractor.email || 'No email provided') : '••••••••@••••••••'}
                       </span>
                     </div>
                   </div>
@@ -729,7 +801,7 @@ export default function ContractorDirectory() {
                       </div>
                     </div>
 
-                    {isAuthenticated && (
+                    {hasActiveSubscription && (
                       <>
                         {contractor.certifications && contractor.certifications.length > 0 && (
                           <div>
@@ -792,7 +864,7 @@ export default function ContractorDirectory() {
                             <Card key={project.id} className="border-muted">
                               <CardContent className="p-3">
                                 <p className="font-medium text-sm mb-1">{project.name}</p>
-                                {isAuthenticated && (
+                                {hasActiveSubscription && (
                                   <div>
                                     <p className="text-xs text-muted-foreground mb-2">{project.description}</p>
                                     <div className="flex items-center gap-1">
@@ -814,7 +886,7 @@ export default function ContractorDirectory() {
                       )}
                     </div>
                     
-                    {isAuthenticated && contractor.proposed_org_proj && (
+                    {hasActiveSubscription && contractor.proposed_org_proj && (
                       <div>
                         <div className="flex items-center gap-2 mb-2">
                           <Building2 className="h-4 w-4 text-accent" />
