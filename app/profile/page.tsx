@@ -2,7 +2,7 @@
 import { createClient } from '@/utils/supabase/client';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Building2, Edit2, Save, X, Upload, User, Trash2, Search, Plus } from 'lucide-react';
+import { Building2, Edit2, Save, X, Upload, User, Trash2, Search, Plus, CreditCard, Calendar, Clock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Organization {
   id: number;
@@ -95,6 +96,19 @@ interface Project {
 
 interface UserProject {
   project: Project;
+}
+
+interface Subscription {
+  id: string;
+  user_id: string;
+  plan_type: 'free-trial' | 'monthly' | 'six-month';
+  status: 'active' | 'canceled' | 'expired';
+  stripe_subscription_id: string | null;
+  stripe_customer_id: string | null;
+  trial_expires_at: string | null;
+  subscription_expires_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 // Add phone number formatting function
@@ -188,6 +202,7 @@ export default function ProfilePage() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [trades, setTrades] = useState<ContractorTrades>({
     is_ge: false,
     is_architect: false,
@@ -284,7 +299,7 @@ export default function ProfilePage() {
         .select('con_certs')
         .eq('role', 'Contractor')
         .not('con_certs', 'is', null);
-
+      
       if (error) {
         console.error('Error fetching certifications:', error);
         return;
@@ -308,6 +323,44 @@ export default function ProfilePage() {
     }
   };
 
+  const fetchSubscription = async () => {
+    if (!user) return;
+    
+    try {
+      const supabase = createClient();
+      
+      // First, let's see all subscriptions for this user
+      const { data: allSubscriptions, error: allError } = await supabase
+        .from('user_subscriptions')
+        .select('*')
+        .eq('user_id', user.id);
+      
+      // Now let's check for active subscriptions specifically
+      const { data, error } = await supabase
+        .from('user_subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single();
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+        console.error('Error fetching subscription:', error);
+        return;
+      }
+      
+      setSubscription(data);
+    } catch (error) {
+      console.error('Error fetching subscription:', error);
+    }
+  };
+
+  // Fetch subscription when user is available
+  useEffect(() => {
+    if (user) {
+      fetchSubscription();
+    }
+  }, [user]);
+
   useEffect(() => {
     const fetchData = async () => {
       const supabase = createClient();
@@ -320,7 +373,10 @@ export default function ProfilePage() {
 
       // Fetch available certifications
       await fetchAvailableCertifications();
-
+      
+      // Fetch subscription data
+      await fetchSubscription();
+      
       // Get public.users data with organization and project details
       const { data: publicUser, error } = await supabase
         .from('users')
@@ -1797,6 +1853,131 @@ export default function ProfilePage() {
           </>
         )}
       </div>
+
+      {/* Subscription Status Section - Only show for non-Org Owners */}
+      {userRole !== 'Org Owner' && (
+        <div className="mb-8">
+          <h2 className="text-xl font-bold mb-4">Subscription Status</h2>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Current Subscription
+              </CardTitle>
+              <CardDescription>
+                View your current subscription and billing information
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {subscription ? (
+                <div className="space-y-4">
+                  {/* Active Subscription Info */}
+                  <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                        <CreditCard className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-green-800">
+                          {subscription.plan_type === 'free-trial' ? 'Free Trial Active' : 'Active Subscription'}
+                        </h3>
+                        <p className="text-sm text-green-700">
+                          {subscription.plan_type === 'free-trial' && 'One Day Free Access'}
+                          {subscription.plan_type === 'monthly' && 'Monthly Plan ($125/month)'}
+                          {subscription.plan_type === 'six-month' && '6-Month Prepaid Plan ($600)'}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                      {subscription.status}
+                    </Badge>
+                  </div>
+
+                  {/* Expiration Info */}
+                  {(subscription.trial_expires_at || subscription.subscription_expires_at) && (
+                    <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <Calendar className="h-4 w-4 text-blue-600" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-blue-800">
+                          {subscription.plan_type === 'free-trial' ? 'Trial Expires' : 'Next Billing Date'}
+                        </p>
+                        <p className="text-sm text-blue-700">
+                          {new Date(subscription.trial_expires_at || subscription.subscription_expires_at!).toLocaleDateString()} at{' '}
+                          {new Date(subscription.trial_expires_at || subscription.subscription_expires_at!).toLocaleTimeString()}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Trial Warning */}
+                  {subscription.plan_type === 'free-trial' && subscription.trial_expires_at && (
+                    <div className="flex items-center gap-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <Clock className="h-4 w-4 text-yellow-600" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-yellow-800">
+                          Trial Expires Soon
+                        </p>
+                        <p className="text-sm text-yellow-700">
+                          Your free trial will expire soon. Upgrade to a paid plan to continue enjoying full access.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                    {subscription.plan_type === 'free-trial' ? (
+                      <Link href="/pricing">
+                        <Button className="w-full sm:w-auto">
+                          Upgrade to Paid Plan
+                        </Button>
+                      </Link>
+                    ) : (
+                      <>
+                        <Button variant="outline" className="w-full sm:w-auto">
+                          Manage Billing
+                        </Button>
+                        <Button variant="outline" className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:bg-red-50">
+                          Cancel Subscription
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* No Active Subscription */}
+                  <div className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                        <CreditCard className="h-5 w-5 text-gray-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-800">No Active Subscription</h3>
+                        <p className="text-sm text-gray-700">
+                          You don't have an active subscription. Choose a plan to get started.
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant="secondary" className="bg-gray-100 text-gray-800">
+                      Inactive
+                    </Badge>
+                  </div>
+
+                  {/* Action Button */}
+                  <div className="pt-4">
+                    <Link href="/pricing">
+                      <Button className="w-full sm:w-auto">
+                        View Plans
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Privacy Settings Section */}
       {(userRole === 'Contractor' || userRole === 'Org Owner') && (

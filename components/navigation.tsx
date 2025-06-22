@@ -13,6 +13,7 @@ import Link from "next/link";
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useState, useEffect } from 'react';
+import { getUserSubscriptionStatus, hasUserAccess, hasProjectProposalsAccess } from "@/utils/subscription";
 
 interface NavigationProps {
   user: SupabaseUser | null;
@@ -21,21 +22,49 @@ interface NavigationProps {
 export function Navigation({ user }: NavigationProps) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [hasOrganizations, setHasOrganizations] = useState(false);
   const supabase = createClientComponentClient();
 
   useEffect(() => {
     async function fetchUserData() {
+      if (!user) {
+        // Reset states when no user
+        setIsAdmin(false);
+        setProfilePictureUrl(null);
+        setHasActiveSubscription(false);
+        setUserRole(null);
+        setHasOrganizations(false);
+        return;
+      }
+
       const { data: userData } = await supabase
         .from('users')
         .select('role, profile_picture_url')
-        .eq('id', user?.id)
+        .eq('id', user.id)
         .single();
       
       setIsAdmin(userData?.role === 'Admin');
       setProfilePictureUrl(userData?.profile_picture_url);
+      setUserRole(userData?.role);
+      
+      // Check subscription status for project proposals access
+      const subscriptionStatus = await getUserSubscriptionStatus(user.id);
+      setHasActiveSubscription(subscriptionStatus.hasActiveSubscription);
+      
+      // For Org Owners, check if they have organizations
+      if (userData?.role === 'Org Owner') {
+        const { data: userOrgs } = await supabase
+          .from('user-org')
+          .select('org_id')
+          .eq('user_id', user.id);
+        
+        setHasOrganizations(Boolean(userOrgs && userOrgs.length > 0));
+      }
     }
     
-    if (user) fetchUserData();
+    fetchUserData();
   }, [user]);
 
   if (!user) {
@@ -98,12 +127,14 @@ export function Navigation({ user }: NavigationProps) {
                   Profile
                 </Button>
               </Link>
-              <Link href="/project-proposals">
-                <Button variant="ghost" className="w-full justify-start" size="sm">
-                  <FileText className="mr-2 h-4 w-4" />
-                  Project Proposals
-                </Button>
-              </Link>
+              {(hasActiveSubscription || (userRole === 'Org Owner' && hasOrganizations)) && (
+                <Link href="/project-proposals">
+                  <Button variant="ghost" className="w-full justify-start" size="sm">
+                    <FileText className="mr-2 h-4 w-4" />
+                    Project Proposals
+                  </Button>
+                </Link>
+              )}
               {isAdmin && (
                 <Link href="/admin">
                   <Button variant="ghost" className="w-full justify-start" size="sm">
