@@ -3,15 +3,17 @@ import { createClient } from "@/utils/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CreateProjectModal } from "@/components/create-project-modal";
+import { SuccessDialog } from "@/components/success-dialog";
 import { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
-import { Building2, Briefcase, LayoutDashboard, PieChart, Plus, Lock } from "lucide-react";
+import { Building2, Briefcase, LayoutDashboard, PieChart, Plus, Lock, CheckCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { getUserSubscriptionStatus } from "@/utils/subscription";
 
 export default function DashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
@@ -21,6 +23,9 @@ export default function DashboardPage() {
   const [projectsList, setProjectsList] = useState<any[]>([]);
   const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const supabase = createClient();
 
   const getOrgs = async () => {
@@ -122,6 +127,76 @@ export default function DashboardPage() {
     };
     getUser();
   }, []);
+
+  // Check for success parameter from Stripe redirect
+  useEffect(() => {
+    const success = searchParams.get('success');
+    const trial = searchParams.get('trial');
+    
+    if (success === 'true') {
+      // Set refreshing flag to prevent dialog from showing
+      setIsRefreshing(true);
+      
+      // Remove the original success parameters and add a flag for after refresh
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('success');
+      newUrl.searchParams.delete('session_id');
+      newUrl.searchParams.delete('trial');
+      newUrl.searchParams.set('showSuccess', 'true');
+      if (trial === 'true') {
+        newUrl.searchParams.set('trialSuccess', 'true');
+      }
+      window.history.replaceState({}, '', newUrl.toString());
+      
+      // Force a full page refresh to ensure subscription status is updated
+      window.location.reload();
+    }
+  }, [searchParams]);
+
+  // Show success dialog after page loads (after refresh)
+  useEffect(() => {
+    // Only show success dialog after loading is complete, user has active subscription, and we're not in the process of refreshing
+    if (!loading && subscriptionStatus && subscriptionStatus.hasActiveSubscription && !isRefreshing) {
+      const showSuccess = searchParams.get('showSuccess');
+      const trialSuccess = searchParams.get('trialSuccess');
+      
+      if (showSuccess === 'true') {
+        let title, message;
+        if (trialSuccess === 'true') {
+          title = 'Free Trial Activated!';
+          message = 'Your 24-hour free trial has been activated. You now have full access to all features. Upgrade to a paid plan before your trial expires to continue enjoying our services.';
+        } else {
+          title = 'Subscription Successful!';
+          message = 'Welcome to Build Tactical LLC! Your subscription has been activated and you now have full access to all features.';
+        }
+        
+        setSuccessMessage({ title, message });
+        setShowSuccessDialog(true);
+        
+        // Remove the success parameters from the URL
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('showSuccess');
+        newUrl.searchParams.delete('trialSuccess');
+        window.history.replaceState({}, '', newUrl.toString());
+      }
+    }
+  }, [loading, subscriptionStatus, searchParams, isRefreshing]);
+
+  // Get success message based on trial parameter (keeping for backward compatibility)
+  const getSuccessMessage = () => {
+    const trial = searchParams.get('trial');
+    if (trial === 'true') {
+      return {
+        title: 'Free Trial Activated!',
+        message: 'Your 24-hour free trial has been activated. You now have full access to all features. Upgrade to a paid plan before your trial expires to continue enjoying our services.'
+      };
+    } else {
+      return {
+        title: 'Subscription Successful!',
+        message: 'Welcome to Build Tactical LLC! Your subscription has been activated and you now have full access to all features.'
+      };
+    }
+  };
 
   useEffect(() => {
     getOrgs();
@@ -386,6 +461,14 @@ export default function DashboardPage() {
         onSubmit={handleCreateProject}
         organizations={orgsList}
         preselectedOrgId={selectedOrg || undefined}
+      />
+
+      {/* Success Dialog */}
+      <SuccessDialog
+        isOpen={showSuccessDialog}
+        onClose={() => setShowSuccessDialog(false)}
+        title={successMessage.title}
+        message={successMessage.message}
       />
     </div>
   );

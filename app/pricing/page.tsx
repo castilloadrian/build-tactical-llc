@@ -78,8 +78,6 @@ export default function Pricing() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<PlanType | null>(null);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [successPlan, setSuccessPlan] = useState<Plan | null>(null);
   const [hasHadTrial, setHasHadTrial] = useState(false);
   const router = useRouter();
   const supabase = createClient();
@@ -134,10 +132,8 @@ export default function Pricing() {
       const success = await activateFreeTrial(user.id);
       
       if (success) {
-        // Find the plan details for the success message
-        const plan = plans.find(p => p.id === 'free-trial');
-        setSuccessPlan(plan || null);
-        setShowSuccess(true);
+        // Redirect directly to dashboard instead of showing success dialog
+        router.push('/dashboard?success=true&trial=true');
       } else {
         throw new Error('Failed to activate free trial');
       }
@@ -177,11 +173,6 @@ export default function Pricing() {
     }
   };
 
-  const handleSuccessClose = () => {
-    setShowSuccess(false);
-    router.push('/dashboard');
-  };
-
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-12">
@@ -195,61 +186,6 @@ export default function Pricing() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
-      {/* Success Dialog */}
-      <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-              <div>
-                <DialogTitle className="text-xl text-green-800">
-                  Free Trial Activated!
-                </DialogTitle>
-                <DialogDescription className="text-green-700">
-                  You now have 24 hours of full access
-                </DialogDescription>
-              </div>
-            </div>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-800">
-                Your free trial for <strong>{successPlan?.name}</strong> has been activated successfully!
-              </p>
-            </div>
-            
-            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <Clock className="h-4 w-4 text-yellow-600" />
-                <span className="font-medium text-yellow-800">Trial Expires Soon</span>
-              </div>
-              <p className="text-sm text-yellow-700">
-                Your free trial expires in 24 hours. Upgrade to a paid plan to continue enjoying full access.
-              </p>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-3 pt-4">
-              <Button 
-                onClick={handleSuccessClose}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                Go to Dashboard
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => setShowSuccess(false)}
-                className="border-green-300 text-green-700 hover:bg-green-100"
-              >
-                Stay on Pricing
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {/* Hero Section */}
       <div className="text-center mb-16 animate-fade-in-up">
         <h1 className="text-5xl font-bold mb-6 text-foreground">
