@@ -63,13 +63,30 @@ export const updateSession = async (request: NextRequest) => {
       // Project proposals require stricter access (subscription OR Org Owner with organizations)
       if (request.nextUrl.pathname.startsWith('/project-proposals')) {
         hasAccess = await hasProjectProposalsAccess(user.data.user.id);
+        
+        if (!hasAccess) {
+          // Check if user is an Org Owner without organizations
+          const { data: userData } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.data.user.id)
+            .single();
+          
+          if (userData?.role === 'Org Owner') {
+            // Org Owner without organizations - redirect to dashboard
+            return NextResponse.redirect(new URL("/dashboard", request.url));
+          } else {
+            // Other users without access - redirect to pricing
+            return NextResponse.redirect(new URL("/pricing", request.url));
+          }
+        }
       } else {
         // Dashboard and projects use general access (subscription OR Org Owner)
         hasAccess = await hasUserAccess(user.data.user.id);
-      }
-      
-      if (!hasAccess) {
-        return NextResponse.redirect(new URL("/pricing", request.url));
+        
+        if (!hasAccess) {
+          return NextResponse.redirect(new URL("/pricing", request.url));
+        }
       }
     }
 
