@@ -207,70 +207,72 @@ export default function Blog() {
           </div>
         ) : (
                      /* Blog Posts Grid */
-           <div className={`grid gap-8 max-w-6xl mx-auto ${
-             posts.length === 1 
-               ? 'grid-cols-1 max-w-2xl' 
-               : posts.length === 2 
-               ? 'grid-cols-1 md:grid-cols-2 max-w-4xl' 
-               : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
-           }`}>
-            {posts.map((post) => (
-          <Card 
-            key={post.id} 
-            className="border-border hover:shadow-lg transition-all duration-200 overflow-hidden cursor-pointer hover:border-accent/50 relative"
-            onClick={(e) => handlePostClick(post, e)}
-          >
-            {/* Admin Actions */}
-            {isAdmin && (
-              <div className="absolute top-3 right-3 z-10">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="h-8 w-8 p-0 bg-black/80 hover:bg-black/90 text-white border border-white/20 shadow-lg backdrop-blur-sm"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={(e) => confirmDelete(post, e)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete Post
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            )}
-            
-            <div className="relative w-full aspect-[16/9] bg-accent/5">
-              <Image
-                src={post.image_url || "/build-tactical-llc-logo.png"}
-                alt={post.image_url ? `${post.title} featured image` : "Build Tactical LLC Logo"}
-                fill
-                sizes="(max-width: 768px) 100vw, 50vw"
-                className={post.image_url ? "object-cover" : "object-contain p-8"}
-                priority
-              />
-            </div>
-            <CardHeader>
-              <CardTitle className="text-2xl line-clamp-2">{post.title}</CardTitle>
-              <div className="text-sm text-muted-foreground">
-                {new Date(post.created_at).toLocaleDateString()}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-lg text-muted-foreground leading-relaxed line-clamp-3">
-                {post.details}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-          </div>
+           <div className="animate-fade-in-up [animation-delay:400ms] opacity-0 [animation-fill-mode:forwards]">
+             <div className={`grid gap-8 max-w-6xl mx-auto ${
+               posts.length === 1 
+                 ? 'grid-cols-1 max-w-2xl' 
+                 : posts.length === 2 
+                 ? 'grid-cols-1 md:grid-cols-2 max-w-4xl' 
+                 : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+             }`}>
+               {posts.map((post) => (
+                 <Card 
+                   key={post.id} 
+                   className="border-border hover:shadow-lg transition-all duration-200 overflow-hidden cursor-pointer hover:border-accent/50 relative"
+                   onClick={(e) => handlePostClick(post, e)}
+                 >
+                   {/* Admin Actions */}
+                   {isAdmin && (
+                     <div className="absolute top-3 right-3 z-10">
+                       <DropdownMenu>
+                         <DropdownMenuTrigger asChild>
+                           <Button
+                             variant="secondary"
+                             size="sm"
+                             className="h-8 w-8 p-0 bg-black/80 hover:bg-black/90 text-white border border-white/20 shadow-lg backdrop-blur-sm"
+                             onClick={(e) => e.stopPropagation()}
+                           >
+                             <MoreVertical className="h-4 w-4" />
+                           </Button>
+                         </DropdownMenuTrigger>
+                         <DropdownMenuContent align="end">
+                           <DropdownMenuItem
+                             onClick={(e) => confirmDelete(post, e)}
+                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                           >
+                             <Trash2 className="h-4 w-4 mr-2" />
+                             Delete Post
+                           </DropdownMenuItem>
+                         </DropdownMenuContent>
+                       </DropdownMenu>
+                     </div>
+                   )}
+                   
+                   <div className="relative w-full aspect-[16/9] bg-accent/5">
+                     <Image
+                       src={post.image_url || "/build-tactical-llc-logo.png"}
+                       alt={post.image_url ? `${post.title} featured image` : "Build Tactical LLC Logo"}
+                       fill
+                       sizes="(max-width: 768px) 100vw, 50vw"
+                       className={post.image_url ? "object-cover" : "object-contain p-8"}
+                       priority
+                     />
+                   </div>
+                   <CardHeader>
+                     <CardTitle className="text-2xl line-clamp-2">{post.title}</CardTitle>
+                     <div className="text-sm text-muted-foreground">
+                       {new Date(post.created_at).toLocaleDateString()}
+                     </div>
+                   </CardHeader>
+                   <CardContent>
+                     <p className="text-lg text-muted-foreground leading-relaxed line-clamp-3">
+                       {post.details}
+                     </p>
+                   </CardContent>
+                 </Card>
+               ))}
+             </div>
+           </div>
         )}
       </div>
 
