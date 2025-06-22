@@ -21,6 +21,7 @@
     "@radix-ui/react-slider": "^1.2.3",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-switch": "^1.2.5",
+    "@stripe/stripe-js": "^7.3.1",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "^2.48.1",
@@ -45,6 +46,7 @@
     "select": "^1.1.2",
     "shadcn": "^2.4.0-canary.9",
     "sonner": "^2.0.1",
+    "stripe": "^18.2.1",
     "xai": "^0.1.0"
   },
   "devDependencies": {

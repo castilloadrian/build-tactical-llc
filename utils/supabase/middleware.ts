@@ -45,10 +45,18 @@ export const updateSession = async (request: NextRequest) => {
       request.nextUrl.pathname.startsWith(route)
     );
     
+    // public routes that should be accessible to everyone
+    const publicRoutes = ["/", "/pricing", "/sign-in", "/sign-up", "/contact", "/blog"];
+    const isPublicRoute = publicRoutes.some(route => 
+      request.nextUrl.pathname === route || request.nextUrl.pathname.startsWith(route)
+    );
+    
     if (isProtectedRoute && user.error) {
       return NextResponse.redirect(new URL("/sign-in", request.url));
     }
 
+    // Only redirect logged-in users from homepage to dashboard
+    // Allow them to access other public routes like pricing
     if (request.nextUrl.pathname === "/" && !user.error) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
