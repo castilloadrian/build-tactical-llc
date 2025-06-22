@@ -1,3 +1,4 @@
+"use client";
 import { signUpAction } from "@/app/actions";
 import { FormMessage, type Message } from "@/components/form-message";
 import { SubmitButton } from "@/components/submit-button";
@@ -5,25 +6,100 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Clock, Star, Calendar } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
-export default async function Signup(props: {
-  searchParams: Promise<Message>;
-}) {
-  const searchParams = await props.searchParams;
-  if ("message" in searchParams) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 py-20">
-        <div className="max-w-md mx-auto">
-          <Card className="border-border shadow-lg">
-            <CardContent className="p-8">
-              <FormMessage message={searchParams} />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
+interface Plan {
+  id: string;
+  name: string;
+  price: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const planIcons = {
+  'free-trial': Clock,
+  'monthly': Star,
+  'six-month': Calendar
+};
+
+export default function Signup() {
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const searchParams = useSearchParams();
+  const planParam = searchParams.get('plan');
+
+  useEffect(() => {
+    // Check if there's a plan stored in sessionStorage (from pricing page)
+    const storedPlanId = sessionStorage.getItem('selectedPlanId');
+    if (storedPlanId) {
+      // Reconstruct the plan object from the stored ID
+      const planNames = {
+        'free-trial': 'One Day Free Access',
+        'monthly': 'Monthly Plan',
+        'six-month': '6-Month Prepaid Plan'
+      };
+      const planPrices = {
+        'free-trial': 'Free',
+        'monthly': '$125/month',
+        'six-month': '$600'
+      };
+      const planDescriptions = {
+        'free-trial': 'Try us for 24 hours',
+        'monthly': 'Flexible monthly billing',
+        'six-month': '$100/month - Pay in full'
+      };
+      
+      setSelectedPlan({
+        id: storedPlanId,
+        name: planNames[storedPlanId as keyof typeof planNames] || 'Selected Plan',
+        price: planPrices[storedPlanId as keyof typeof planPrices] || '',
+        description: planDescriptions[storedPlanId as keyof typeof planDescriptions] || '',
+        icon: planIcons[storedPlanId as keyof typeof planIcons] || Clock
+      });
+    } else if (planParam) {
+      // If plan is in URL params, create a basic plan object
+      const planNames = {
+        'free-trial': 'One Day Free Access',
+        'monthly': 'Monthly Plan',
+        'six-month': '6-Month Prepaid Plan'
+      };
+      const planPrices = {
+        'free-trial': 'Free',
+        'monthly': '$125/month',
+        'six-month': '$600'
+      };
+      const planDescriptions = {
+        'free-trial': 'Try us for 24 hours',
+        'monthly': 'Flexible monthly billing',
+        'six-month': '$100/month - Pay in full'
+      };
+      
+      setSelectedPlan({
+        id: planParam,
+        name: planNames[planParam as keyof typeof planNames] || 'Selected Plan',
+        price: planPrices[planParam as keyof typeof planPrices] || '',
+        description: planDescriptions[planParam as keyof typeof planDescriptions] || '',
+        icon: planIcons[planParam as keyof typeof planIcons] || Clock
+      });
+    }
+  }, [planParam]);
+
+  const handleSignUp = async (formData: FormData) => {
+    // Add the selected plan to the form data
+    if (selectedPlan) {
+      formData.append('selectedPlan', selectedPlan.id);
+    }
+    
+    // Call the original sign up action
+    await signUpAction(formData);
+    
+    // Clear the stored plan after successful sign up
+    sessionStorage.removeItem('selectedPlanId');
+  };
+
+  // Get the icon component for the selected plan
+  const IconComponent = selectedPlan?.icon || Clock;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-20">
@@ -35,6 +111,19 @@ export default async function Signup(props: {
           <p className="text-lg text-muted-foreground">
             Create your account to get started
           </p>
+          
+          {/* Show selected plan if available */}
+          {selectedPlan && (
+            <div className="mt-6 p-4 bg-accent/10 border border-accent/20 rounded-lg">
+              <div className="flex items-center gap-3 mb-2">
+                <IconComponent className="h-5 w-5 text-accent" />
+                <h3 className="font-semibold text-foreground">{selectedPlan.name}</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {selectedPlan.price} • {selectedPlan.description}
+              </p>
+            </div>
+          )}
         </div>
 
         <Card className="border-border shadow-lg">
@@ -115,14 +204,12 @@ export default async function Signup(props: {
               </div>
 
               <SubmitButton 
-                formAction={signUpAction as unknown as (formData: FormData) => Promise<void>} 
+                formAction={handleSignUp as unknown as (formData: FormData) => Promise<void>} 
                 pendingText="Creating account..."
                 className="w-full bg-accent hover:bg-accent/90 text-white"
               >
-                Create Account
+                {selectedPlan ? `Create Account & Continue with ${selectedPlan.name}` : 'Create Account'}
               </SubmitButton>
-              
-              <FormMessage message={searchParams} />
               
               <div className="text-center pt-4 border-t border-border">
                 <p className="text-sm text-muted-foreground">

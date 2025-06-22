@@ -11,6 +11,7 @@ export const signUpAction = async (formData: FormData) => {
   const fullName = formData.get("fullName")?.toString();
   const org_proj = formData.get("org_proj")?.toString();
   const role = formData.get("role")?.toString();
+  const selectedPlan = formData.get("selectedPlan")?.toString();
   const supabase = await createClient();
   const origin = (await headers()).get("origin");
 
@@ -34,6 +35,7 @@ export const signUpAction = async (formData: FormData) => {
         full_name: fullName,
         org_proj: org_proj,
         role: mappedRole,
+        selected_plan: selectedPlan,
       }
     },
   });
