@@ -668,10 +668,10 @@ export default function ContractorDirectory() {
                   <img
                     src={contractor.profile_picture_url}
                     alt={`${contractor.full_name || 'Contractor'} profile picture`}
-                    className="w-full h-full object-cover"
+                    className={`w-full h-full object-cover ${!isAuthenticated ? 'blur-md' : ''}`}
                   />
                 ) : (
-                  <div className="w-full h-full bg-accent/10 flex items-center justify-center">
+                  <div className={`w-full h-full bg-accent/10 flex items-center justify-center ${!isAuthenticated ? 'blur-sm' : ''}`}>
                     <div className="text-center">
                       <Users className="h-12 w-12 text-accent mx-auto mb-2" />
                       <p className="text-sm text-muted-foreground">No profile picture</p>
@@ -683,7 +683,7 @@ export default function ContractorDirectory() {
               <CardHeader className="pb-4">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <CardTitle className="text-lg leading-tight mb-2">
+                    <CardTitle className={`text-lg leading-tight mb-2 ${!isAuthenticated ? 'blur-sm' : ''}`}>
                       {contractor.full_name || 'Unnamed Contractor'}
                     </CardTitle>
                     <div className={`flex items-center gap-2 text-sm text-muted-foreground ${!isAuthenticated ? 'blur-sm' : ''}`}>
