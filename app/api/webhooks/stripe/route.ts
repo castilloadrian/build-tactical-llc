@@ -23,6 +23,15 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    // Ignore events older than deployment (prevent processing old retry events)
+    const deploymentTime = new Date('2025-06-22T23:00:00Z'); // Update this timestamp
+    const eventTime = new Date(event.created * 1000);
+    
+    if (eventTime < deploymentTime) {
+      console.log(`Ignoring old event ${event.id} from ${eventTime}`);
+      return NextResponse.json({ received: true });
+    }
+    
     switch (event.type) {
       case 'checkout.session.completed':
         const session = event.data.object as Stripe.Checkout.Session;
@@ -63,9 +72,25 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   const userId = session.metadata?.userId;
   const planId = session.metadata?.planId;
 
+  console.log(`Processing checkout session ${session.id} for user ${userId}`);
+
   if (!userId || !planId) {
-    console.error('Missing metadata in checkout session');
+    console.error('Missing metadata in checkout session', { sessionId: session.id, userId, planId });
     return;
+  }
+
+  // Store the Stripe customer ID in the user's profile
+  if (session.customer) {
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ stripe_customer_id: session.customer as string })
+      .eq('id', userId);
+    
+    if (profileError) {
+      console.error('Error storing Stripe customer ID:', profileError);
+    } else {
+      console.log(`Stored Stripe customer ID ${session.customer} for user ${userId}`);
+    }
   }
 
   // Determine plan type from Stripe price ID
