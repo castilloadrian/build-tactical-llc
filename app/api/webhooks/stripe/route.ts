@@ -70,12 +70,18 @@ export async function POST(request: NextRequest) {
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
   const supabase = await createClient();
   const userId = session.metadata?.userId;
-  const planId = session.metadata?.planId;
+  const planType = session.metadata?.planType as 'monthly' | 'six-month';
 
-  console.log(`Processing checkout session ${session.id} for user ${userId}`);
+  console.log(`Processing checkout session ${session.id} for user ${userId} with plan ${planType}`);
 
-  if (!userId || !planId) {
-    console.error('Missing metadata in checkout session', { sessionId: session.id, userId, planId });
+  if (!userId || !planType) {
+    console.error('Missing metadata in checkout session', { sessionId: session.id, userId, planType });
+    return;
+  }
+
+  // Validate plan type
+  if (!['monthly', 'six-month'].includes(planType)) {
+    console.error('Invalid plan type:', planType);
     return;
   }
 
@@ -91,20 +97,6 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     } else {
       console.log(`Stored Stripe customer ID ${session.customer} for user ${userId}`);
     }
-  }
-
-  // Determine plan type from Stripe price ID using environment variables
-  const monthlyPriceId = process.env.STRIPE_MONTHLY_PRICE_ID!;
-  const sixMonthPriceId = process.env.STRIPE_SIX_MONTH_PRICE_ID!;
-  
-  let planType: 'monthly' | 'six-month';
-  if (planId === monthlyPriceId) {
-    planType = 'monthly';
-  } else if (planId === sixMonthPriceId) {
-    planType = 'six-month';
-  } else {
-    console.error('Unknown plan ID:', planId);
-    return;
   }
 
   // Check if user has had a free trial
