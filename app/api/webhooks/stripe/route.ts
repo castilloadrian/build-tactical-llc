@@ -166,6 +166,8 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   let status = 'active';
   if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
     status = 'expired';
+  } else if (subscription.cancel_at_period_end) {
+    status = 'canceled'; // Cancelled but still active until period end
   }
 
   const { error: updateError } = await supabase
