@@ -19,17 +19,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user's subscription to get customer ID
+    // Find user's subscription to get customer ID (include both active and canceled)
     const { data: subscription, error: subError } = await supabase
       .from('user_subscriptions')
       .select('stripe_customer_id, stripe_subscription_id')
       .eq('user_id', user.id)
-      .eq('status', 'active')
+      .in('status', ['active', 'canceled'])
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single();
 
     if (subError || !subscription) {
       return NextResponse.json(
-        { error: 'No active subscription found' },
+        { error: 'No subscription found' },
         { status: 404 }
       );
     }
