@@ -240,6 +240,7 @@ export default function ContractorDirectory() {
         return;
       }
       
+      // Always fetch basic data for filtering, full data only for subscribed users
       const { data, error } = await supabase
         .from('users')
         .select(`
@@ -248,72 +249,66 @@ export default function ContractorDirectory() {
           role,
           profile_picture_url,
           is_private,
-          ${shouldShowFullData ? `
-            email,
-            proposed_org_proj,
-            con_certs,
-            cooperatives:contractor_cooperatives(
-              is_buy_board,
-              is_tips,
-              is_choice_partners,
-              is_omnia_partners,
-              is_sourcewell
-            ),
-            trades:contractor_trades(
-              is_ge,
-              is_architect,
-              is_engineer,
-              is_hvac,
-              is_electrical,
-              is_plumbing,
-              is_drywall,
-              is_painting,
-              is_flooring,
-              is_roofing,
-              is_concrete,
-              is_civil,
-              is_paving,
-              is_scoreboards,
-              is_gymfloor,
-              is_pool,
-              is_security,
-              is_it,
-              is_fire,
-              is_masonry,
-              is_construction_management,
-              is_sitework_civil,
-              is_metals_welding,
-              is_wood_carpentry,
-              is_thermal_moisture_protection,
-              is_doors_windows_glazing,
-              is_finishes,
-              is_solar_energy,
-              is_generators_backup,
-              is_environmental_specialty_services
-            ),
-            client_types:contractor_client_types(
-              is_joc,
-              is_residential,
-              is_commercial,
-              is_industrial,
-              is_local_government,
-              is_federal_government,
-              is_hospitals,
-              is_athletic_facilities,
-              is_military_facilities,
-              other
-            ),
-            projects:"user-project"(
-              project:projects(*)
+          ${shouldShowFullData ? 'email,' : ''}
+          ${shouldShowFullData ? 'proposed_org_proj,' : ''}
+          con_certs,
+          cooperatives:contractor_cooperatives(
+            is_buy_board,
+            is_tips,
+            is_choice_partners,
+            is_omnia_partners,
+            is_sourcewell
+          ),
+          trades:contractor_trades(
+            is_ge,
+            is_architect,
+            is_engineer,
+            is_hvac,
+            is_electrical,
+            is_plumbing,
+            is_drywall,
+            is_painting,
+            is_flooring,
+            is_roofing,
+            is_concrete,
+            is_civil,
+            is_paving,
+            is_scoreboards,
+            is_gymfloor,
+            is_pool,
+            is_security,
+            is_it,
+            is_fire,
+            is_masonry,
+            is_construction_management,
+            is_sitework_civil,
+            is_metals_welding,
+            is_wood_carpentry,
+            is_thermal_moisture_protection,
+            is_doors_windows_glazing,
+            is_finishes,
+            is_solar_energy,
+            is_generators_backup,
+            is_environmental_specialty_services
+          ),
+          client_types:contractor_client_types(
+            is_joc,
+            is_residential,
+            is_commercial,
+            is_industrial,
+            is_local_government,
+            is_federal_government,
+            is_hospitals,
+            is_athletic_facilities,
+            is_military_facilities,
+            other
+          ),
+          projects:"user-project"(
+            project:projects(
+              id,
+              name${shouldShowFullData ? ',description,status,created_at' : ''}
             )
-          ` : `
-            projects:"user-project"(
-              project:projects(
-                id,
-                name
-              )
-            )
-          `}
+          )
         `)
         .eq('role', 'Contractor')
         .eq('is_private', false)
@@ -325,64 +320,64 @@ export default function ContractorDirectory() {
         throw error;
       }
 
-      // Get unique certifications and cooperatives
+      // Always get unique values for filtering (regardless of subscription status)
       const uniqueCerts = new Set<string>();
       const uniqueCoops = new Set<string>();
       const uniqueTrades = new Set<string>();
       const uniqueClientTypes = new Set<string>();
       
       data?.forEach((contractor: any) => {
-        if (shouldShowFullData) {
-          if (contractor.con_certs) {
-            contractor.con_certs.forEach((cert: string) => uniqueCerts.add(cert));
-          }
-          if (contractor.cooperatives) {
-            // Add boolean cooperatives
-            Object.entries(contractor.cooperatives).forEach(([key, value]) => {
-              if (key.startsWith('is_') && value === true) {
-                uniqueCoops.add(COOPERATIVE_LABELS[key as keyof typeof COOPERATIVE_LABELS]);
-              }
-            });
-          }
-          if (contractor.trades) {
-            // Add boolean trades
-            Object.entries(contractor.trades).forEach(([key, value]) => {
-              if (key.startsWith('is_') && value === true) {
-                uniqueTrades.add(TRADE_LABELS[key as keyof typeof TRADE_LABELS]);
-              }
-            });
-            // Add other trades
-            if (contractor.trades.other) {
-              contractor.trades.other.forEach((trade: string) => uniqueTrades.add(trade));
+        // Always populate filter options for everyone
+        if (contractor.con_certs) {
+          contractor.con_certs.forEach((cert: string) => uniqueCerts.add(cert));
+        }
+        if (contractor.cooperatives) {
+          // Add boolean cooperatives
+          Object.entries(contractor.cooperatives).forEach(([key, value]) => {
+            if (key.startsWith('is_') && value === true) {
+              uniqueCoops.add(COOPERATIVE_LABELS[key as keyof typeof COOPERATIVE_LABELS]);
             }
-          }
-          if (contractor.client_types) {
-            // Add boolean client types
-            Object.entries(contractor.client_types).forEach(([key, value]) => {
-              if (key.startsWith('is_') && value === true) {
-                uniqueClientTypes.add(CLIENT_TYPE_LABELS[key as keyof typeof CLIENT_TYPE_LABELS]);
-              }
-            });
-            // Add other client types
-            if (contractor.client_types.other) {
-              contractor.client_types.other.forEach((type: string) => uniqueClientTypes.add(type));
+          });
+        }
+        if (contractor.trades) {
+          // Add boolean trades
+          Object.entries(contractor.trades).forEach(([key, value]) => {
+            if (key.startsWith('is_') && value === true) {
+              uniqueTrades.add(TRADE_LABELS[key as keyof typeof TRADE_LABELS]);
             }
+          });
+          // Add other trades
+          if (contractor.trades.other) {
+            contractor.trades.other.forEach((trade: string) => uniqueTrades.add(trade));
+          }
+        }
+        if (contractor.client_types) {
+          // Add boolean client types
+          Object.entries(contractor.client_types).forEach(([key, value]) => {
+            if (key.startsWith('is_') && value === true) {
+              uniqueClientTypes.add(CLIENT_TYPE_LABELS[key as keyof typeof CLIENT_TYPE_LABELS]);
+            }
+          });
+          // Add other client types
+          if (contractor.client_types.other) {
+            contractor.client_types.other.forEach((type: string) => uniqueClientTypes.add(type));
           }
         }
       });
 
+      // Always populate available filters for filtering functionality
       setAvailableFilters({
-        certifications: shouldShowFullData ? Array.from(uniqueCerts).sort() : [],
-        cooperatives: shouldShowFullData ? Array.from(uniqueCoops).sort() : [],
-        trades: shouldShowFullData ? Array.from(uniqueTrades).sort() : [],
-        client_types: shouldShowFullData ? Array.from(uniqueClientTypes).sort() : []
+        certifications: Array.from(uniqueCerts).sort(),
+        cooperatives: Array.from(uniqueCoops).sort(),
+        trades: Array.from(uniqueTrades).sort(),
+        client_types: Array.from(uniqueClientTypes).sort()
       });
 
       // Transform the data to match our interface
       const transformedContractors = data?.map((contractor: any) => {
-        // Get active trades
+        // Always get active trades for filtering
         const activeTrades: string[] = [];
-        if (shouldShowFullData && contractor.trades) {
+        if (contractor.trades) {
           // Add boolean trades
           Object.entries(contractor.trades).forEach(([key, value]) => {
             if (key.startsWith('is_') && value === true) {
@@ -395,9 +390,9 @@ export default function ContractorDirectory() {
           }
         }
 
-        // Get active client types
+        // Always get active client types for filtering
         const activeClientTypes: string[] = [];
-        if (shouldShowFullData && contractor.client_types) {
+        if (contractor.client_types) {
           // Add boolean client types
           Object.entries(contractor.client_types).forEach(([key, value]) => {
             if (key.startsWith('is_') && value === true) {
@@ -410,9 +405,9 @@ export default function ContractorDirectory() {
           }
         }
 
-        // Get active cooperatives
+        // Always get active cooperatives for filtering
         const activeCooperatives: string[] = [];
-        if (shouldShowFullData && contractor.cooperatives) {
+        if (contractor.cooperatives) {
           // Add boolean cooperatives
           Object.entries(contractor.cooperatives).forEach(([key, value]) => {
             if (key.startsWith('is_') && value === true) {
@@ -428,10 +423,10 @@ export default function ContractorDirectory() {
           role: contractor.role,
           proposed_org_proj: shouldShowFullData ? contractor.proposed_org_proj : null,
           profile_picture_url: contractor.profile_picture_url,
-          trades: shouldShowFullData ? activeTrades : [],
-          certifications: shouldShowFullData ? (contractor.con_certs || []) : [],
-          client_types: shouldShowFullData ? activeClientTypes : [],
-          cooperatives: shouldShowFullData ? activeCooperatives : [],
+          trades: activeTrades, // Always available for filtering
+          certifications: contractor.con_certs || [], // Always available for filtering
+          client_types: activeClientTypes, // Always available for filtering
+          cooperatives: activeCooperatives, // Always available for filtering
           projects: contractor.projects?.map((proj: any) => ({
             id: proj.project.id,
             name: proj.project.name,
@@ -847,6 +842,100 @@ export default function ContractorDirectory() {
                                   <span className="text-sm text-muted-foreground">• {coop}</span>
                                 </div>
                               ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {!hasActiveSubscription && (
+                      <>
+                        {/* Show certifications for filtering but blur for non-subscribers */}
+                        {contractor.certifications && contractor.certifications.length > 0 && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <Briefcase className="h-4 w-4 text-accent" />
+                              <h4 className="text-sm font-medium text-foreground">Certifications</h4>
+                              <Lock className="h-3 w-3 text-muted-foreground" />
+                            </div>
+                            <div className="space-y-2 relative">
+                              <div className="blur-sm">
+                                {contractor.certifications.slice(0, 2).map((cert, index) => (
+                                  <div key={index} className="flex items-center gap-2">
+                                    <span className="text-sm text-muted-foreground">• {cert}</span>
+                                  </div>
+                                ))}
+                                {contractor.certifications.length > 2 && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-muted-foreground">• And {contractor.certifications.length - 2} more...</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="bg-background/80 px-3 py-1 rounded-md border">
+                                  <p className="text-xs text-muted-foreground">Subscribe to view</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Show client types for filtering but blur for non-subscribers */}
+                        {contractor.client_types && contractor.client_types.length > 0 && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <Building2 className="h-4 w-4 text-accent" />
+                              <h4 className="text-sm font-medium text-foreground">Client Types</h4>
+                              <Lock className="h-3 w-3 text-muted-foreground" />
+                            </div>
+                            <div className="space-y-2 relative">
+                              <div className="blur-sm">
+                                {contractor.client_types.slice(0, 2).map((type, index) => (
+                                  <div key={index} className="flex items-center gap-2">
+                                    <span className="text-sm text-muted-foreground">• {type}</span>
+                                  </div>
+                                ))}
+                                {contractor.client_types.length > 2 && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-muted-foreground">• And {contractor.client_types.length - 2} more...</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="bg-background/80 px-3 py-1 rounded-md border">
+                                  <p className="text-xs text-muted-foreground">Subscribe to view</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Show cooperatives for filtering but blur for non-subscribers */}
+                        {contractor.cooperatives && contractor.cooperatives.length > 0 && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <Users className="h-4 w-4 text-accent" />
+                              <h4 className="text-sm font-medium text-foreground">Cooperatives</h4>
+                              <Lock className="h-3 w-3 text-muted-foreground" />
+                            </div>
+                            <div className="space-y-2 relative">
+                              <div className="blur-sm">
+                                {contractor.cooperatives.slice(0, 2).map((coop, index) => (
+                                  <div key={index} className="flex items-center gap-2">
+                                    <span className="text-sm text-muted-foreground">• {coop}</span>
+                                  </div>
+                                ))}
+                                {contractor.cooperatives.length > 2 && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-muted-foreground">• And {contractor.cooperatives.length - 2} more...</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="bg-background/80 px-3 py-1 rounded-md border">
+                                  <p className="text-xs text-muted-foreground">Subscribe to view</p>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         )}
