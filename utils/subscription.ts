@@ -47,11 +47,12 @@ export async function getUserSubscriptionStatus(userId: string): Promise<Subscri
   
   try {
     // Query the database for user's subscription status
+    // Include both 'active' and 'canceled' to allow access until end of billing cycle
     const { data, error } = await supabase
       .from('user_subscriptions')
       .select('*')
       .eq('user_id', userId)
-      .eq('status', 'active')
+      .in('status', ['active', 'canceled'])
       .single();
     
     if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"

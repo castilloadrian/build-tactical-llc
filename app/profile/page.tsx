@@ -335,12 +335,14 @@ export default function ProfilePage() {
         .select('*')
         .eq('user_id', user.id);
       
-      // Now let's check for active subscriptions specifically
+      // Check for active and canceled subscriptions (canceled users retain access until end of cycle)
       const { data, error } = await supabase
         .from('user_subscriptions')
         .select('*')
         .eq('user_id', user.id)
-        .eq('status', 'active')
+        .in('status', ['active', 'canceled'])
+        .order('created_at', { ascending: false })
+        .limit(1)
         .single();
       
       if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
@@ -1918,39 +1920,70 @@ export default function ProfilePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {subscription ? (
-                <div className="space-y-4">
-                  {/* Active Subscription Info */}
-                  <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                        <CreditCard className="h-5 w-5 text-green-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-green-800">
-                          {subscription.plan_type === 'free-trial' ? 'Free Trial Active' : 'Active Subscription'}
-                        </h3>
-                        <p className="text-sm text-green-700">
-                          {subscription.plan_type === 'free-trial' && 'One Day Free Access'}
-                          {subscription.plan_type === 'monthly' && 'Monthly Plan ($125/month)'}
-                          {subscription.plan_type === 'six-month' && '6-Month Prepaid Plan ($600)'}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant="secondary" className="bg-green-100 text-green-800">
-                      {subscription.status}
-                    </Badge>
-                  </div>
+                              {subscription ? (
+                  <div className="space-y-4">
+                   {/* Subscription Info */}
+                   <div className={`flex items-center justify-between p-4 rounded-lg ${
+                     subscription.status === 'canceled' 
+                       ? 'bg-orange-50 border border-orange-200' 
+                       : 'bg-green-50 border border-green-200'
+                   }`}>
+                     <div className="flex items-center gap-3">
+                       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                         subscription.status === 'canceled'
+                           ? 'bg-orange-100'
+                           : 'bg-green-100'
+                       }`}>
+                         <CreditCard className={`h-5 w-5 ${
+                           subscription.status === 'canceled' 
+                             ? 'text-orange-600' 
+                             : 'text-green-600'
+                         }`} />
+                       </div>
+                       <div>
+                         <h3 className={`font-semibold ${
+                           subscription.status === 'canceled' 
+                             ? 'text-orange-800' 
+                             : 'text-green-800'
+                         }`}>
+                           {subscription.status === 'canceled' && 'Subscription Canceled'}
+                           {subscription.status === 'active' && subscription.plan_type === 'free-trial' && 'Free Trial Active'}
+                           {subscription.status === 'active' && subscription.plan_type !== 'free-trial' && 'Active Subscription'}
+                         </h3>
+                         <p className={`text-sm ${
+                           subscription.status === 'canceled' 
+                             ? 'text-orange-700' 
+                             : 'text-green-700'
+                         }`}>
+                           {subscription.plan_type === 'free-trial' && 'One Day Free Access'}
+                           {subscription.plan_type === 'monthly' && 'Monthly Plan ($125/month)'}
+                           {subscription.plan_type === 'six-month' && '6-Month Prepaid Plan ($600)'}
+                           {subscription.status === 'canceled' && ' - Access continues until expiration'}
+                         </p>
+                       </div>
+                     </div>
+                     <Badge variant="secondary" className={
+                       subscription.status === 'canceled'
+                         ? 'bg-orange-100 text-orange-800'
+                         : 'bg-green-100 text-green-800'
+                     }>
+                       {subscription.status}
+                     </Badge>
+                   </div>
 
                   {/* Expiration Info */}
                   {(subscription.trial_expires_at || subscription.subscription_expires_at) && (
                     <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <Calendar className="h-4 w-4 text-blue-600" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-blue-800">
-                          {subscription.plan_type === 'free-trial' ? 'Trial Expires' : 'Next Billing Date'}
-                        </p>
-                        <p className="text-sm text-blue-700">
+                                              <div className="flex-1">
+                          <p className="text-sm font-medium text-blue-800">
+                           {subscription.status === 'canceled' 
+                             ? 'Access Ends'
+                             : subscription.plan_type === 'free-trial' 
+                               ? 'Trial Expires' 
+                               : 'Next Billing Date'}
+                          </p>
+                          <p className="text-sm text-blue-700">
                           {new Date(subscription.trial_expires_at || subscription.subscription_expires_at!).toLocaleDateString()} at{' '}
                           {new Date(subscription.trial_expires_at || subscription.subscription_expires_at!).toLocaleTimeString()}
                         </p>
@@ -1973,9 +2006,24 @@ export default function ProfilePage() {
                     </div>
                   )}
 
-                  {/* Action Buttons */}
-                  <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                    {subscription.plan_type === 'free-trial' ? (
+                                      {/* Action Buttons */}
+                    <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                     {subscription.status === 'canceled' ? (
+                       <>
+                         <Button 
+                           variant="outline" 
+                           className="w-full sm:w-auto"
+                           onClick={handleManageBilling}
+                         >
+                           Reactivate Subscription
+                         </Button>
+                         <Link href="/pricing">
+                           <Button variant="outline" className="w-full sm:w-auto">
+                             View Other Plans
+                           </Button>
+                         </Link>
+                       </>
+                     ) : subscription.plan_type === 'free-trial' ? (
                       <>
                         <Link href="/pricing">
                           <Button className="w-full sm:w-auto">
