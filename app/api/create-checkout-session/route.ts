@@ -21,10 +21,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Define your Stripe price IDs - replace with actual IDs from your Stripe dashboard
+    // Get price IDs from environment variables
+    const monthlyPriceId = process.env.STRIPE_MONTHLY_PRICE_ID!;
+    const sixMonthPriceId = process.env.STRIPE_SIX_MONTH_PRICE_ID!;
+    
     const priceIds = {
-      'price_1RcsDfR9SQjspoGcqaWrTBiV': 'price_1RcsDfR9SQjspoGcqaWrTBiV', // Monthly plan
-      'price_1RcsLDR9SQjspoGcP6zpBvPc': 'price_1RcsLDR9SQjspoGcP6zpBvPc', // 6-month plan
+      [monthlyPriceId]: monthlyPriceId, // Monthly plan
+      [sixMonthPriceId]: sixMonthPriceId, // 6-month plan
     };
 
     const priceId = priceIds[planId as keyof typeof priceIds];
