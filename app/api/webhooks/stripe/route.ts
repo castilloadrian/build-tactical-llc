@@ -93,11 +93,14 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     }
   }
 
-  // Determine plan type from Stripe price ID
+  // Determine plan type from Stripe price ID using environment variables
+  const monthlyPriceId = process.env.STRIPE_MONTHLY_PRICE_ID!;
+  const sixMonthPriceId = process.env.STRIPE_SIX_MONTH_PRICE_ID!;
+  
   let planType: 'monthly' | 'six-month';
-  if (planId === 'price_1RcsDfR9SQjspoGcqaWrTBiV') {
+  if (planId === monthlyPriceId) {
     planType = 'monthly';
-  } else if (planId === 'price_1RcsLDR9SQjspoGcP6zpBvPc') {
+  } else if (planId === sixMonthPriceId) {
     planType = 'six-month';
   } else {
     console.error('Unknown plan ID:', planId);
