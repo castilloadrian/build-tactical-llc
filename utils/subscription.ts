@@ -199,7 +199,8 @@ export async function hasUserHadFreeTrial(userId: string): Promise<boolean> {
 export async function upgradeFromFreeTrial(
   userId: string, 
   newPlanType: 'monthly' | 'six-month',
-  stripeSubscriptionId?: string
+  stripeSubscriptionId?: string,
+  stripeCustomerId?: string
 ): Promise<boolean> {
   const supabase = createClient();
   
@@ -235,6 +236,7 @@ export async function upgradeFromFreeTrial(
           trial_expires_at: null, // Clear trial expiration
           subscription_expires_at: subscriptionExpiresAt.toISOString(),
           stripe_subscription_id: stripeSubscriptionId || null,
+          stripe_customer_id: stripeCustomerId || null,
           updated_at: new Date().toISOString()
         })
         .eq('id', existingTrial.id);
@@ -256,6 +258,7 @@ export async function upgradeFromFreeTrial(
           status: 'active',
           subscription_expires_at: subscriptionExpiresAt.toISOString(),
           stripe_subscription_id: stripeSubscriptionId || null,
+          stripe_customer_id: stripeCustomerId || null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         });
@@ -277,7 +280,8 @@ export async function upgradeFromFreeTrial(
 export async function createPaidSubscription(
   userId: string,
   planType: 'monthly' | 'six-month',
-  stripeSubscriptionId?: string
+  stripeSubscriptionId?: string,
+  stripeCustomerId?: string
 ): Promise<boolean> {
   const supabase = createClient();
   
@@ -299,6 +303,7 @@ export async function createPaidSubscription(
         status: 'active',
         subscription_expires_at: subscriptionExpiresAt.toISOString(),
         stripe_subscription_id: stripeSubscriptionId || null,
+        stripe_customer_id: stripeCustomerId || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
