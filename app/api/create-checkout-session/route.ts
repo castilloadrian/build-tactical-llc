@@ -8,7 +8,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: NextRequest) {
   try {
-    const { planId, userId } = await request.json();
+    const { planType, userId } = await request.json();
     
     // Verify user is authenticated
     const supabase = await createClient();
@@ -21,20 +21,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get price IDs from environment variables
+    // Map plan types to price IDs using environment variables
     const monthlyPriceId = process.env.STRIPE_MONTHLY_PRICE_ID!;
     const sixMonthPriceId = process.env.STRIPE_SIX_MONTH_PRICE_ID!;
     
-    const priceIds = {
-      [monthlyPriceId]: monthlyPriceId, // Monthly plan
-      [sixMonthPriceId]: sixMonthPriceId, // 6-month plan
+    const planToPriceId = {
+      'monthly': monthlyPriceId,
+      'six-month': sixMonthPriceId,
     };
 
-    const priceId = priceIds[planId as keyof typeof priceIds];
+    const priceId = planToPriceId[planType as keyof typeof planToPriceId];
     
     if (!priceId) {
       return NextResponse.json(
-        { error: 'Invalid plan ID' },
+        { error: 'Invalid plan type' },
         { status: 400 }
       );
     }
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       customer_email: user.email,
       metadata: {
         userId: user.id,
-        planId: planId,
+        planType: planType,
       },
     });
 

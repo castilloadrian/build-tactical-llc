@@ -53,8 +53,7 @@ const plans: Plan[] = [
     ],
     buttonText: 'Get Started',
     popular: true,
-    icon: Star,
-    stripePriceId: 'price_1RcsDfR9SQjspoGcqaWrTBiV'
+    icon: Star
   },
   {
     id: 'six-month',
@@ -69,8 +68,7 @@ const plans: Plan[] = [
     ],
     buttonText: 'Choose 6-Month Plan',
     bestValue: true,
-    icon: Calendar,
-    stripePriceId: 'price_1RcsLDR9SQjspoGcP6zpBvPc'
+    icon: Calendar
   }
 ];
 
@@ -150,7 +148,7 @@ export default function Pricing() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          planId: plan.stripePriceId, 
+          planType: plan.id, // Send plan type instead of price ID
           userId: user.id 
         })
       });
