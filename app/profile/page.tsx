@@ -1199,6 +1199,55 @@ export default function ProfilePage() {
     }
   };
 
+  // Subscription management functions
+  const handleManageBilling = async () => {
+    try {
+      const response = await fetch('/api/create-customer-portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create billing portal session');
+      }
+
+      const { url } = await response.json();
+      if (url) {
+        window.location.href = url;
+      }
+    } catch (error) {
+      console.error('Error opening billing portal:', error);
+      toast.error('Failed to open billing portal. Please try again.');
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    if (!confirm('Are you sure you want to cancel your subscription? For paid plans, you will keep access until the end of your billing period.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/cancel-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel subscription');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        toast.success(result.message);
+        // Refresh the subscription data
+        await fetchSubscription();
+      }
+    } catch (error) {
+      console.error('Error canceling subscription:', error);
+      toast.error('Failed to cancel subscription. Please try again.');
+    }
+  };
+
   if (isLoading) {
     return <div className="container max-w-7xl py-12 px-4">Loading...</div>;
   }
@@ -1927,17 +1976,34 @@ export default function ProfilePage() {
                   {/* Action Buttons */}
                   <div className="flex flex-col sm:flex-row gap-3 pt-4">
                     {subscription.plan_type === 'free-trial' ? (
-                      <Link href="/pricing">
-                        <Button className="w-full sm:w-auto">
-                          Upgrade to Paid Plan
+                      <>
+                        <Link href="/pricing">
+                          <Button className="w-full sm:w-auto">
+                            Upgrade to Paid Plan
+                          </Button>
+                        </Link>
+                        <Button 
+                          variant="outline" 
+                          className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={handleCancelSubscription}
+                        >
+                          Cancel Trial
                         </Button>
-                      </Link>
+                      </>
                     ) : (
                       <>
-                        <Button variant="outline" className="w-full sm:w-auto">
+                        <Button 
+                          variant="outline" 
+                          className="w-full sm:w-auto"
+                          onClick={handleManageBilling}
+                        >
                           Manage Billing
                         </Button>
-                        <Button variant="outline" className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:bg-red-50">
+                        <Button 
+                          variant="outline" 
+                          className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={handleCancelSubscription}
+                        >
                           Cancel Subscription
                         </Button>
                       </>
