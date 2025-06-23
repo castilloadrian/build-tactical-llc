@@ -85,30 +85,21 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     return;
   }
 
-  // Store the Stripe customer ID in the user's profile
-  if (session.customer) {
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ stripe_customer_id: session.customer as string })
-      .eq('id', userId);
-    
-    if (profileError) {
-      console.error('Error storing Stripe customer ID:', profileError);
-    } else {
-      console.log(`Stored Stripe customer ID ${session.customer} for user ${userId}`);
-    }
-  }
+  // Note: stripe_customer_id will be stored in user_subscriptions table
+  // when the subscription record is created below
 
   // Check if user has had a free trial
   const hasHadTrial = await hasUserHadFreeTrial(userId);
   
   let success: boolean;
+  const stripeCustomerId = session.customer as string;
+  
   if (hasHadTrial) {
     // User has had a trial, try to upgrade the existing record
-    success = await upgradeFromFreeTrial(userId, planType, session.subscription as string);
+    success = await upgradeFromFreeTrial(userId, planType, session.subscription as string, stripeCustomerId);
   } else {
     // User hasn't had a trial, create a new subscription
-    success = await createPaidSubscription(userId, planType, session.subscription as string);
+    success = await createPaidSubscription(userId, planType, session.subscription as string, stripeCustomerId);
   }
   
   if (success) {
@@ -126,14 +117,14 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   const customer = await stripe.customers.retrieve(customerId);
   if (customer.deleted) return;
 
-  // Find user by Stripe customer ID
-  const { data: user, error } = await supabase
-    .from('profiles')
-    .select('id')
+  // Find user by Stripe customer ID in user_subscriptions table
+  const { data: userSubscription, error } = await supabase
+    .from('user_subscriptions')
+    .select('user_id')
     .eq('stripe_customer_id', customerId)
     .single();
 
-  if (error || !user) {
+  if (error || !userSubscription) {
     console.error('Could not find user for Stripe customer:', customerId);
     return;
   }
@@ -145,13 +136,13 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       stripe_subscription_id: subscription.id,
       updated_at: new Date().toISOString()
     })
-    .eq('user_id', user.id)
+    .eq('user_id', userSubscription.user_id)
     .eq('status', 'active');
 
   if (updateError) {
     console.error('Error updating subscription with Stripe ID:', updateError);
   } else {
-    console.log(`Updated subscription for user ${user.id} with Stripe subscription ${subscription.id}`);
+    console.log(`Updated subscription for user ${userSubscription.user_id} with Stripe subscription ${subscription.id}`);
   }
 }
 
@@ -159,14 +150,14 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const supabase = await createClient();
   const customerId = subscription.customer as string;
   
-  // Find user by Stripe customer ID
-  const { data: user, error } = await supabase
-    .from('profiles')
-    .select('id')
+  // Find user by Stripe customer ID in user_subscriptions table
+  const { data: userSubscription, error } = await supabase
+    .from('user_subscriptions')
+    .select('user_id')
     .eq('stripe_customer_id', customerId)
     .single();
 
-  if (error || !user) {
+  if (error || !userSubscription) {
     console.error('Could not find user for Stripe customer:', customerId);
     return;
   }
@@ -183,13 +174,13 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       status,
       updated_at: new Date().toISOString()
     })
-    .eq('user_id', user.id)
+    .eq('user_id', userSubscription.user_id)
     .eq('stripe_subscription_id', subscription.id);
 
   if (updateError) {
     console.error('Error updating subscription status:', updateError);
   } else {
-    console.log(`Updated subscription status for user ${user.id} to ${status}`);
+    console.log(`Updated subscription status for user ${userSubscription.user_id} to ${status}`);
   }
 }
 
@@ -197,14 +188,14 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   const supabase = await createClient();
   const customerId = subscription.customer as string;
   
-  // Find user by Stripe customer ID
-  const { data: user, error } = await supabase
-    .from('profiles')
-    .select('id')
+  // Find user by Stripe customer ID in user_subscriptions table
+  const { data: userSubscription, error } = await supabase
+    .from('user_subscriptions')
+    .select('user_id')
     .eq('stripe_customer_id', customerId)
     .single();
 
-  if (error || !user) {
+  if (error || !userSubscription) {
     console.error('Could not find user for Stripe customer:', customerId);
     return;
   }
@@ -216,12 +207,12 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
       status: 'expired',
       updated_at: new Date().toISOString()
     })
-    .eq('user_id', user.id)
+    .eq('user_id', userSubscription.user_id)
     .eq('stripe_subscription_id', subscription.id);
 
   if (updateError) {
     console.error('Error marking subscription as expired:', updateError);
   } else {
-    console.log(`Marked subscription as expired for user ${user.id}`);
+    console.log(`Marked subscription as expired for user ${userSubscription.user_id}`);
   }
 } 
