@@ -540,7 +540,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               Back to Dashboard
             </Button>
           </Link>
-          <h1 className="text-2xl sm:text-3xl font-bold text-center sm:absolute sm:left-1/2 sm:transform sm:-translate-x-1/2">{projectName}</h1>
+          <div className="flex-1 mx-4 min-w-0">
+            <h1 className={`font-bold text-center ${
+              projectName.length > 50 ? 'text-lg sm:text-xl' :
+              projectName.length > 30 ? 'text-xl sm:text-2xl' :
+              'text-2xl sm:text-3xl'
+            }`}>{projectName}</h1>
+          </div>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
