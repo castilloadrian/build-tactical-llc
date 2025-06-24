@@ -24,10 +24,24 @@ const planIcons = {
   'six-month': Calendar
 };
 
-export default function Signup() {
+export default function Signup(props: {
+  searchParams: Promise<Message>;
+}) {
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const searchParams = useSearchParams();
-  const planParam = searchParams.get('plan');
+  const urlSearchParams = useSearchParams();
+  const planParam = urlSearchParams.get('plan');
+  
+  // Get search params for messages
+  const [message, setMessage] = useState<Message | null>(null);
+  
+  useEffect(() => {
+    const getSearchParams = async () => {
+      const searchParamsData = await props.searchParams;
+      setMessage(searchParamsData);
+    };
+    getSearchParams();
+  }, [props.searchParams]);
 
   useEffect(() => {
     // Check if there's a plan stored in sessionStorage (from pricing page)
@@ -210,6 +224,8 @@ export default function Signup() {
               >
                 {selectedPlan ? `Create Account & Continue with ${selectedPlan.name}` : 'Create Account'}
               </SubmitButton>
+              
+              {message && <FormMessage message={message} />}
               
               <div className="text-center pt-4 border-t border-border">
                 <p className="text-sm text-muted-foreground">

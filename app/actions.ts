@@ -111,11 +111,19 @@ export const resetPasswordAction = async (formData: FormData) => {
   const confirmPassword = formData.get("confirmPassword") as string;
 
   if (!password || !confirmPassword) {
-    return { error: "Password and confirm password are required" };
+    return encodedRedirect(
+      "error",
+      "/reset-password",
+      "Password and confirm password are required"
+    );
   }
 
   if (password !== confirmPassword) {
-    return { error: "Passwords do not match" };
+    return encodedRedirect(
+      "error",
+      "/reset-password",
+      "Passwords do not match"
+    );
   }
 
   const { error } = await supabase.auth.updateUser({
@@ -123,12 +131,22 @@ export const resetPasswordAction = async (formData: FormData) => {
   });
 
   if (error) {
-    return { error: "Password update failed" };
+    console.error("Password update error:", error);
+    return encodedRedirect(
+      "error",
+      "/reset-password",
+      "Password update failed. Please try again."
+    );
   }
 
-  // Sign out the user
+  // Sign out the user after successful password reset
   await supabase.auth.signOut();
-  return redirect("/sign-in");
+  
+  return encodedRedirect(
+    "success",
+    "/sign-in",
+    "Password updated successfully! Please sign in with your new password."
+  );
 };
 
 export const signOutAction = async () => {

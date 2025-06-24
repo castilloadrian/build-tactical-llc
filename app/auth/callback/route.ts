@@ -9,12 +9,28 @@ export async function GET(request: Request) {
   const code = requestUrl.searchParams.get("code");
   const origin = requestUrl.origin;
   const redirectTo = requestUrl.searchParams.get("redirect_to")?.toString();
+  const type = requestUrl.searchParams.get("type");
 
   if (code) {
     const supabase = await createClient();
-    await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    
+    if (error) {
+      console.error('Error exchanging code for session:', error);
+      // If there's an error but we have a redirectTo for password reset, still redirect there
+      if (redirectTo === '/reset-password') {
+        return NextResponse.redirect(`${origin}${redirectTo}?error=session_error`);
+      }
+      return NextResponse.redirect(`${origin}/sign-in?error=auth_error`);
+    }
   }
 
+  // Handle password reset specifically
+  if (type === 'recovery' || redirectTo === '/reset-password') {
+    return NextResponse.redirect(`${origin}/reset-password`);
+  }
+
+  // Handle other redirects
   if (redirectTo) {
     return NextResponse.redirect(`${origin}${redirectTo}`);
   }
